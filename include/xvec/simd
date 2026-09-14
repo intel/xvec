@@ -1,0 +1,574 @@
+//===----------------------------------------------------------------------===//
+//
+// Copyright (C) 2021 Intel Corporation
+//
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// xvec header files refer to the following instruction sets:
+// - Intel(R) Advanced Vector Extensions (Intel(R) AVX)
+// - Intel(R) Advanced Vector Extensions 10 (Intel(R) AVX10)
+// - Intel(R) Advanced Vector Extensions 2 (Intel(R) AVX2)
+// - Intel(R) Advanced Vector Extensions 512 (Intel(R) AVX-512)
+// - Intel(R) Streaming SIMD Extensions (Intel(R) SSE).
+
+#pragma once
+
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <cstddef>
+#include <concepts>
+#include <bit>
+#include <complex>
+#include <functional> // std::plus, std::negate, etc.
+
+#include <numeric>
+#include <ostream> // std::ostream
+#include <ranges>
+#include <span>
+#include <tuple>
+#include <type_traits>
+
+#include <xvec/detail/config.hpp>
+#include <xvec/detail/compat.hpp>
+
+#include <xvec/detail/target_config.hpp>
+
+#include <xvec/detail/core.hpp>
+
+#include <xvec/detail/std_limits.hpp>
+#include <xvec/detail/std_rebind.hpp>
+
+#include <xvec/generic/generic_impl.hpp>
+#include <xvec/detail/iterator.hpp>
+
+// Vendor specific variants.
+#if defined(__SSE__) and !defined(_XVEC_FORCE_SCALAR)
+#include <xvec/x86/intrin.hpp>
+#include <xvec/x86/x86_impl.hpp>
+#endif
+
+// Operators go after target specific extensions, so they get picked up.
+#include <xvec/detail/operators.hpp>
+
+#include <xvec/detail/mask.hpp>
+
+#ifdef _XVEC_DEFINE_OUTPUT_OPERATORS
+#include <iostream>
+#endif
+
+namespace _XVEC_NAMESPACE::simd
+{
+
+// :TODO: Pay more attention to constexpr. Many of the functions can be made to work with constexpr,
+// but they don't enable that at the moment.
+
+/// \defgroup simd_stream_output Streaming output operators for simd values and masks
+/// @brief Output operators to write simd values to standard C++ streams.
+
+/// \defgroup simd_cassign Compound assignment operators
+/// @brief Compound simd assignment operations.
+
+/// \defgroup simd_constructor Constructors for simd values
+/// @brief Constructors for simd values.
+
+/// \defgroup simd_unary Unary operators
+/// @brief Apply a unary operator to every element of a simd value.
+
+/// \defgroup simd_container Container-like operations
+/// @brief Operations which borrow their behaviour from STL containers like vector and array.
+
+/// \defgroup simd_copy Memory operations
+/// @brief Operations which treat the simd as a block of data which can be copied back and forth to memory.
+
+/// \defgroup simd_range Range operations
+/// @brief Operations which allow data to be moved back and forth between a simd and a range.
+
+/// \defgroup simd_subscript Subscript operators
+/// @brief Access a simd element by a subscript index.
+
+/// \defgroup simd_binary Binary operators
+/// @brief Apply the indicated operator to left and right-hand values as a binary element-wise operation.
+
+/// \defgroup simd_compare Relational comparison operators
+/// @brief Apply the given comparison to respective elements of the inputs, generating a mask as an output.
+
+/// \defgroup simd_complex Complex valued simd operations
+/// @brief Allow std::complex<> to be used as the element type of a simd, and mimic the
+/// API from std::complex (e.g., norm, abs).
+
+/// Main simd class. :TODO: Fill in more details.
+template <typename _Tp, typename _Abi> class basic_vec {
+public:
+
+  using traits = detail::vec_traits<target_tag, _Tp, _Abi::num_elements>;  ///< Traits for this vec type.
+
+  using value_type = _Tp;                     ///< The type of each individual element in the vec.
+  using reference_type = value_type&;         ///< A reference type for each individual element in the vec.
+  using abi_type = _Abi;                      ///< The ABI type of this vec type.
+  using iterator = simd_iterator<basic_vec>;  ///< An iterator which allows a vec to be treated as a range.
+  using const_iterator = simd_iterator<const basic_vec>;
+
+  /// The type used to represent a vec of the real-valued elements in a vec of complex values.
+  using real_type =
+    std::conditional_t<vec_complex<basic_vec>,
+                       rebind_t<detail::complex_element_type<_Tp>, basic_vec>, struct invalid>;
+
+  using builtin_type = typename traits::builtin_type;
+
+  /// For small vec objects this stores up to one target register's worth of data.
+  using register_type = typename traits::register_type;
+
+  /// A mask which can be used to query elements (e.g., comparison, classification), and
+  /// select/blend/merge elements.
+  using mask_type = basic_mask<sizeof(_Tp), _Abi>;
+
+  /// Return the number of elements contained in the vec.
+  static constexpr auto size = size_constant<simd_size_v<_Tp, _Abi>>{};
+
+private:
+
+  /// The underlying built-in object representing this simd::vec data type. This is
+  /// the compiler's own data type that it uses to represent a simd::vec. The data
+  /// type may span multiple target registers, or be only a partial register.
+  builtin_type data;   ///< @internal
+
+public:
+
+  constexpr basic_vec() requires (!vec_complex<basic_vec>) = default;
+  constexpr basic_vec() requires (vec_complex<basic_vec>) : data() {}
+
+  constexpr basic_vec(const basic_vec&) = default;
+  constexpr basic_vec(basic_vec&&) noexcept = default;
+  constexpr basic_vec& operator=(const basic_vec&) = default;
+  constexpr basic_vec& operator=(basic_vec&&) noexcept = default;
+
+  /// Allow a vec to be constructed from the compiler's own representation. The
+  /// compiler may use multiple or partial target registers in its
+  /// representation. This constructor allows a vec to be built from the output
+  /// of an overloaded operator, a builtin, and so on.
+  /// @ingroup simd_constructor
+  constexpr basic_vec(const builtin_type& v) noexcept : data(v) {}
+
+  /// Allow a vec to be constructed from a target register, such as the return
+  /// value of an intrinsic. If the vec object is smaller than the register
+  /// type then some values may be discarded, so the constructor is explicit to
+  /// make the user be clear about this. Note that in the special case that the
+  /// vec is already the exact size of the target register, this constructor
+  /// will be disabled because the register type will match the compiler's own
+  /// builtin type.
+  /// @ingroup simd_constructor
+  explicit constexpr basic_vec(register_type r) noexcept
+    requires (!std::same_as<register_type, builtin_type>) : data(traits::from_register(r)) {}
+
+  /// @brief Constructs a basic_vec by reading the contents of an object with the same
+  /// number of values (e.g., span, C-array, std::array). Both unmasked and masked variants are provided.
+  /// @tparam _InputSpan The span-like object to copy.
+  /// @tparam _Flags... Flags which control any conversions necessary.
+  /// @param in_span The source span-like object
+  /// @param m A mask to use in the load. Any elements with a cleared mask bit will be value initialised.
+  /// @param f The flags to apply to the copy.
+  ///@{
+  template<typename _InputSpan, typename... _Flags>
+  requires (!vec_type<_InputSpan> &&
+            detail::span_extent_v<_InputSpan> == size &&
+            detail::explicitly_convertible_to<detail::span_element_type<_InputSpan>, _Tp>)
+  constexpr basic_vec(const _InputSpan& in_span, flags<_Flags...> f = {})
+    : basic_vec([=](){
+        if (std::is_constant_evaluated())
+          return basic_vec([=](auto i) { return static_cast<value_type>(in_span[i]); });
+        else
+          return detail::load<basic_vec>(target, std::span(in_span), detail::add_unchecked_flag(f));
+      }()) {}
+
+  template<typename _InputSpan, typename... _Flags>
+  requires (!vec_type<_InputSpan> &&
+            detail::span_extent_v<_InputSpan> == size &&
+            detail::explicitly_convertible_to<detail::span_element_type<_InputSpan>, _Tp>)
+  constexpr basic_vec(const _InputSpan& in_span, const mask_type& m, flags<_Flags...> f = {})
+    : basic_vec([=](){
+        if (std::is_constant_evaluated())
+          return select(m, basic_vec(in_span, f), basic_vec());
+        else
+          return detail::load_masked<basic_vec>(target, std::span(in_span), m, detail::add_unchecked_flag(f));
+      }()) {}
+  ///@}
+
+  /// @brief Create a basic_vec value in which every element of the basic_vec is set to the single value provided.
+  /// @ingroup simd_constructor
+  /// @param v The value to broadcast to every element of the new vec value.
+  template<detail::broadcast_constructible<_Tp> _Up = _Tp>
+  constexpr basic_vec(_Up&& v) noexcept : basic_vec([v](auto) { return _Tp(v); }) {}
+
+  /// @brief Create a basic_vec complex value from the supplied basic_vec format real and imaginary values.
+  /// Each complex basic_vec value will be created by combining the respective elements from the input
+  /// basic_vec values which represent the real and imaginary components. If no
+  /// imaginary basic_vec is provided then it will default, which is equivalent to
+  /// allowing a complex basic_vec value to be created from a real-valued basic_vec.
+  /// @param r The basic_vec representing the real components of the complex basic_vec to construct
+  /// @param i The basic_vec representing the imaginary components of the complex basic_vec to construct
+  /// @ingroup simd_constructor
+  constexpr basic_vec(const real_type& r, const real_type& i = {}) noexcept
+  requires (vec_complex<basic_vec>) : data(zip(r, i).to_builtin()) {}
+
+  /// @brief Construct a new basic_vec value where every element comes from a
+  /// different basic_vec value, converting the types where necessary. Either
+  /// both must be complex or neither must be complex. - constructing
+  /// non-complex from complex is undefined - constructing complex from
+  /// non-complex is handled in previous constructor. Each basic_vec value will
+  /// take the converted value of the respective basic_vec input element.
+  ///
+  /// Note that two near identical copies are provided, one explicit and one
+  /// implicit. Ideally the explicit would be made conditional on
+  /// `implicitly_convertible` but there is a bug in Intel compiler before 2023
+  /// version which means this doesn't work properly.
+  /// @ingroup simd_constructor
+  /// @param v The value to copy.
+  ///@{
+  template<vec_type _Vp>
+  requires (!(vec_complex<basic_vec> ^ vec_complex<_Vp>) &&
+             (_Vp::size() == size()) &&
+              detail::explicitly_convertible_to<typename _Vp::value_type, _Tp> &&
+              detail::needs_explicit_conversion<typename _Vp::value_type, _Tp>)
+  explicit        constexpr basic_vec(const _Vp& v) noexcept :
+    basic_vec(detail::convert_operator<basic_vec>(v)) {}
+
+  template<vec_type _Vp>
+  requires (!(vec_complex<basic_vec> ^ vec_complex<_Vp>) &&
+             (_Vp::size() == size()) &&
+              detail::explicitly_convertible_to<typename _Vp::value_type, _Tp> &&
+              !detail::needs_explicit_conversion<typename _Vp::value_type, _Tp>)
+  /*no_explicit*/ constexpr basic_vec(const _Vp& v) noexcept :
+    basic_vec(detail::convert_operator<basic_vec>(v)) {}
+  ///@}
+
+  /// @brief Construct a new vec value by using a generator function which
+  /// computes the value of each element of a vec given its index position. The
+  /// generator function will accept an index value (0, 1, 2, etc) and returns
+  /// the value to be written into that position.
+  /// @param fn A function which accepts a simd_size_type index parameter and which
+  /// returns a _Tp value representing the element to store at that index.
+  /// @ingroup simd_constructor
+  constexpr explicit basic_vec(detail::generator_invocable<value_type, size> auto&& fn) : basic_vec(detail::generate<basic_vec>(fn)) {}
+
+  /// Range interface.
+  ///@{
+  constexpr iterator begin() noexcept { return {*this, 0}; }
+  constexpr const_iterator begin() const noexcept { return {*this, 0}; }
+  constexpr const_iterator cbegin() const noexcept { return {*this, 0}; }
+  constexpr std::default_sentinel_t end() const noexcept { return {}; }
+  constexpr std::default_sentinel_t cend() const noexcept { return {}; }
+  ///@}
+
+  /// @brief Allow the vec to be turned into the closest matching target vec register type.
+  /// This will return the smallest target register that can contain all the elements of the vec.
+  explicit constexpr operator typename traits::register_type() const { return traits::to_register(data); }
+
+  /// @brief Convert the vec into the nearest register size which is large enough to store all the vec elements.
+  /// This is more convenient to use than the explicit register_type cast since there is no need to work out the register
+  /// type.
+  constexpr typename traits::register_type to_register() const { return traits::to_register(data); }
+
+  /// @brief Return the builtin value.
+  constexpr builtin_type to_builtin() const { return data; }
+
+  static constexpr basic_vec from_builtin(const builtin_type& v) noexcept { return basic_vec(v); }
+
+  /// @brief Access the index at the given position of the basic_vec. Undefined if the position is outside the basic_vec size.
+  /// \ingroup simd_subscript
+  /// \param pos The position of the accessed element.
+  constexpr value_type operator[](simd_size_type pos) const { return detail::subscript(target, *this, pos); }
+
+  /// @brief Index a basic_vec value by the unsigned integral indexes supplied in
+  /// another basic_vec value. This is equivalent to a permutation.
+  /// @tparam _AbiU The index basic_vec value ABI
+  /// the permuted vec value, and has the same number of elements as the index basic_vec.
+  /// @tparam _Up The index type, which must be unsigned integral.
+  /// @param v The basic_vec value to permute
+  /// @param indexes The indexes by which to permute
+  /// @return The contents of v permuted by the indexes. The output of each element position is v[idx[iota()]].
+  constexpr auto operator[](const vec_integral auto& indexes) const { return permute(*this, indexes); }
+
+  /// @brief Given two vectors, choose one or other element as output for each element
+  /// position. select works like (is_bit_set ? a : b) for each element.
+  /// When the corresponding bit is set in the mask the output element is chosen
+  /// to be from a, otherwise from b. The second operand defaults to zero if no
+  /// value is supplied. Note that select has the opposite ordering sense to
+  /// blend.
+  /// @ingroup simd_select
+  friend constexpr basic_vec simd_select_impl(const mask_type& m, const basic_vec& if_true, const basic_vec& if_false) noexcept
+    { return detail::select_if_else(target, m, if_true, if_false); }
+
+  /// @brief Perform a logical not on every element of the basic_vec to generate a mask.
+  /// \ingroup simd_unary
+  /// \param v The value to which to apply logical not.
+  /// \return A new mask_type value in which each element is formed by applying
+  /// operator! to each respective element of the inputs.
+  constexpr mask_type operator!() const noexcept
+    requires requires (value_type a) { {!a} -> std::same_as<bool>; }
+    { return detail::do_operator<std::logical_not<>>(*this); }
+
+  /// @brief Perform a bitwise not on every element of the basic_vec.
+  /// \ingroup simd_unary
+  /// \param v The value to which to apply bitwise not.
+  /// \return A new basic_vec value in which each element is formed by applying the bitwise not to each respective element of the inputs.
+  constexpr basic_vec operator~() const noexcept
+    requires detail::supported_unary_op<value_type, std::bit_not<>>
+    { return detail::do_operator<std::bit_not<>>(*this); }
+
+  /// @{
+  /// @brief Apply a given unary operation to each element of a basic_vec value.
+  /// \ingroup simd_unary
+  /// \return A new basic_vec value in which each respective element is formed by applying the operator to each respective element of the inputs.
+  constexpr basic_vec operator-() const noexcept
+    requires detail::supported_unary_op<value_type, std::negate<>>
+    { return detail::do_operator<std::negate<>>(*this); }
+
+  constexpr basic_vec operator+() const noexcept { return *this; }
+  constexpr basic_vec& operator++() noexcept requires requires (basic_vec v) { v + basic_vec(_Tp(1)); }
+    { *this = *this + basic_vec(_Tp(1)); return *this; }
+  constexpr basic_vec  operator++(int) noexcept requires requires (basic_vec v) { v + basic_vec(_Tp(1)); }
+    { const auto original = *this; *this = *this + basic_vec(_Tp(1)); return original; }
+  constexpr basic_vec& operator--() noexcept requires requires (basic_vec v) { v - basic_vec(_Tp(1)); }
+    { *this = *this - basic_vec(_Tp(1)); return *this; }
+  constexpr basic_vec  operator--(int) noexcept requires requires (basic_vec v) { v - basic_vec(_Tp(1)); }
+    { const auto original = *this; *this = *this - basic_vec(_Tp(1)); return original; }
+  /// @}
+
+  /// \ingroup simd_binary
+  /// @brief Invoke a binary arithmetic operator on two basic_vec values, applying the operation to each pair of respective elements.
+  /// \param lhs The left hand value of the binary expression
+  /// \param rhs The right hand value of the binary expression
+  /// \return A new basic_vec value in which each respective element is formed by applying the operator to each respective element of the inputs.
+  /// @{
+  friend constexpr basic_vec operator+(const basic_vec& lhs, const basic_vec& rhs) noexcept requires detail::supported_binary_op<value_type, std::plus<>> 
+    { return detail::do_operator<std::plus<>>(lhs, rhs); }
+  friend constexpr basic_vec operator-(const basic_vec& lhs, const basic_vec& rhs) noexcept requires detail::supported_binary_op<value_type, std::minus<>>
+    { return detail::do_operator<std::minus<>>(lhs, rhs); }
+  friend constexpr basic_vec operator*(const basic_vec& lhs, const basic_vec& rhs) noexcept requires detail::supported_binary_op<value_type, std::multiplies<>>
+    { return detail::do_operator<std::multiplies<>>(lhs, rhs); }
+  friend constexpr basic_vec operator/(const basic_vec& lhs, const basic_vec& rhs) noexcept requires detail::supported_binary_op<value_type, std::divides<>>
+    { return detail::do_operator<std::divides<>>(lhs, rhs); }
+  friend constexpr basic_vec operator%(const basic_vec& lhs, const basic_vec& rhs) noexcept requires detail::supported_binary_op<value_type, std::modulus<>>
+    { return detail::do_operator<std::modulus<>>(lhs, rhs); }
+
+  friend constexpr basic_vec operator&(const basic_vec& lhs, const basic_vec& rhs) noexcept requires detail::supported_binary_op<value_type, std::bit_and<>>
+    { return detail::do_operator<std::bit_and<>>(lhs, rhs); }
+  friend constexpr basic_vec operator|(const basic_vec& lhs, const basic_vec& rhs) noexcept requires detail::supported_binary_op<value_type, std::bit_or<>>
+    { return detail::do_operator<std::bit_or<>>(lhs, rhs); }
+  friend constexpr basic_vec operator^(const basic_vec& lhs, const basic_vec& rhs) noexcept requires detail::supported_binary_op<value_type, std::bit_xor<>>
+    { return detail::do_operator<std::bit_xor<>>(lhs, rhs); }
+  ///@}
+
+  /// @brief Special multiply operators for scalar-complex products. It is more efficient to
+  /// handle this explicitly.
+  ///@{
+  friend constexpr basic_vec operator*(const basic_vec& lhs, const detail::complex_element_type<_Tp>& rhs) noexcept
+  requires (vec_complex<basic_vec>)
+  {
+    auto t = simd_bit_cast<detail::complex_element_type<_Tp>>(lhs) * rhs;
+    return std::bit_cast<basic_vec>(t);
+  }
+
+  friend constexpr basic_vec operator*(const detail::complex_element_type<_Tp>& lhs, const basic_vec& rhs) noexcept
+  requires (vec_complex<basic_vec>)
+    { return rhs * lhs; }
+
+  friend constexpr basic_vec& operator*=(basic_vec& lhs, const detail::complex_element_type<_Tp>& rhs) noexcept requires (vec_complex<basic_vec>)
+    { lhs = lhs * rhs; return lhs; }
+  ///@}
+
+  /// @brief Binary relational operators
+  /// \ingroup simd_binary
+  /// \param lhs The left hand value of the binary comparison expression
+  /// \param rhs The right hand value of the binary comparison expression
+  /// \return A mask which encodes the result of each element-wise comparison in its respective boolean element.
+  /// @{
+  friend constexpr mask_type operator==(const basic_vec& lhs, const basic_vec& rhs) noexcept
+    requires detail::supported_relational_op<value_type, std::equal_to<>>
+    { return detail::do_operator<std::equal_to<>>(lhs, rhs); }
+  friend constexpr mask_type operator!=(const basic_vec& lhs, const basic_vec& rhs) noexcept
+    requires detail::supported_relational_op<value_type, std::not_equal_to<>>
+    { return detail::do_operator<std::not_equal_to<>>(lhs, rhs); }
+  friend constexpr mask_type operator< (const basic_vec& lhs, const basic_vec& rhs) noexcept
+    requires detail::supported_relational_op<value_type, std::less<>>
+    { return detail::do_operator<std::less<>>(lhs, rhs); }
+  friend constexpr mask_type operator<=(const basic_vec& lhs, const basic_vec& rhs) noexcept
+    requires detail::supported_relational_op<value_type, std::less_equal<>>
+    { return detail::do_operator<std::less_equal<>>(lhs, rhs); }
+  friend constexpr mask_type operator> (const basic_vec& lhs, const basic_vec& rhs) noexcept
+    requires detail::supported_relational_op<value_type, std::greater<>>
+    { return detail::do_operator<std::greater<>>(lhs, rhs); }
+  friend constexpr mask_type operator>=(const basic_vec& lhs, const basic_vec& rhs) noexcept
+    requires detail::supported_relational_op<value_type, std::greater_equal<>>
+    { return detail::do_operator<std::greater_equal<>>(lhs, rhs); }
+  ///@}
+
+  /// Compound assignment operator
+  /// @{
+  /// \ingroup simd_cassign
+  /// \param rhs The right hand value of the binary expression
+  /// \return A new vec value in which each respective element is formed by applying the operator to each respective element of the inputs.
+  friend constexpr basic_vec& operator+=(basic_vec& lhs, const basic_vec& rhs) noexcept
+    requires detail::supported_binary_op<value_type, std::plus<>>
+    { lhs = lhs + rhs; return lhs; }
+  friend constexpr basic_vec& operator-=(basic_vec& lhs, const basic_vec& rhs) noexcept
+    requires detail::supported_binary_op<value_type, std::minus<>>
+    { lhs = lhs - rhs; return lhs; }
+  friend constexpr basic_vec& operator*=(basic_vec& lhs, const basic_vec& rhs) noexcept
+    requires detail::supported_binary_op<value_type, std::multiplies<>>
+    { lhs = lhs * rhs; return lhs; }
+  friend constexpr basic_vec& operator/=(basic_vec& lhs, const basic_vec& rhs) noexcept
+    requires detail::supported_binary_op<value_type, std::divides<>>
+    { lhs = lhs / rhs; return lhs; }
+  friend constexpr basic_vec& operator%=(basic_vec& lhs, const basic_vec& rhs) noexcept
+    requires detail::supported_binary_op<value_type, std::modulus<>>
+    { lhs = lhs % rhs; return lhs; }
+  friend constexpr basic_vec& operator&=(basic_vec& lhs, const basic_vec& rhs) noexcept
+    requires detail::supported_binary_op<value_type, std::bit_and<>>
+    { lhs = lhs & rhs; return lhs; }
+  friend constexpr basic_vec& operator|=(basic_vec& lhs, const basic_vec& rhs) noexcept
+    requires detail::supported_binary_op<value_type, std::bit_or<>>
+    { lhs = lhs | rhs; return lhs; }
+  friend constexpr basic_vec& operator^=(basic_vec& lhs, const basic_vec& rhs) noexcept
+    requires detail::supported_binary_op<value_type, std::bit_xor<>>
+    { lhs = lhs ^ rhs; return lhs; }
+  /// @}
+
+  /// Shift operators
+  /// @{
+  /// \ingroup simd_binary
+  /// \param lhs The left-hand value of the binary expression
+  /// \param rhs The right-hand value of the binary expression
+  /// \param shift The shift offset, which must be an unsigned value.
+  /// \return A new basic_vec value in which each respective element is formed by applying the shift operator to each respective element of the inputs.
+  /// @{
+  friend constexpr basic_vec operator<<(const basic_vec& lhs, const basic_vec& rhs) noexcept requires detail::supported_binary_op<value_type, detail::bit_lshift<>>
+    { return detail::do_operator<detail::bit_lshift<>>(lhs, rhs); }
+  friend constexpr basic_vec operator>>(const basic_vec& lhs, const basic_vec& rhs) noexcept requires detail::supported_binary_op<value_type, detail::bit_rshift<>>
+    { return detail::do_operator<detail::bit_rshift<>>(lhs, rhs); }
+
+  friend constexpr basic_vec operator<<(const basic_vec& lhs, simd_size_type rhs) noexcept requires detail::supported_binary_op<value_type, detail::bit_lshift<>>
+    { return lhs << basic_vec(value_type(rhs)); }
+  friend constexpr basic_vec operator>>(const basic_vec& lhs, simd_size_type rhs) noexcept requires detail::supported_binary_op<value_type, detail::bit_rshift<>>
+    { return lhs >> basic_vec(value_type(rhs)); }
+  /// @}
+
+  /// @{
+  /// \ingroup simd_cassign
+  /// \param shift The value by which to shift.
+  /// \return A new vec value in which each respective element is formed by applying the operator to each respective element of the inputs.
+  friend constexpr basic_vec& operator<<=(basic_vec& lhs, const basic_vec& shift) noexcept
+    requires detail::supported_binary_op<value_type, detail::bit_lshift<>>
+    { lhs = lhs << shift; return lhs; }
+  friend constexpr basic_vec& operator>>=(basic_vec& lhs, const basic_vec& shift) noexcept
+    requires detail::supported_binary_op<value_type, detail::bit_rshift<>>
+  { lhs = lhs >> shift; return lhs; }
+  friend constexpr basic_vec& operator<<=(basic_vec& lhs, simd_size_type shift) noexcept
+    requires detail::supported_binary_op<value_type, detail::bit_lshift<>>
+  { lhs = lhs << shift; return lhs; }
+  friend constexpr basic_vec& operator>>=(basic_vec& lhs, simd_size_type shift) noexcept
+    requires detail::supported_binary_op<value_type, detail::bit_rshift<>>
+    { lhs = lhs >> shift; return lhs; }
+  /// @}
+
+  /// @brief Return a vec containing only the real values from this complex object.
+  /// @return A new vec with the same number of elements as the original object but containing only the real components.
+  /// @ingroup simd_complex
+  constexpr real_type real() const noexcept requires (vec_complex<basic_vec>) {
+    const auto e = simd_bit_cast<typename _Tp::value_type>(*this);
+    return permute<size>(e, [](simd_size_type idx) { return idx * 2; });
+  };
+
+  /// @brief Return a vec containing only the imaginary values from this complex object.
+  /// @return A new basic_vec with the same number of elements as the original object but containing only the imaginary components.
+  /// @ingroup simd_complex
+  constexpr real_type imag() const noexcept requires (vec_complex<basic_vec>) {
+    const auto e = simd_bit_cast<typename _Tp::value_type>(*this);
+    return permute<size>(e, [](simd_size_type idx) { return idx * 2 + 1; });
+  };
+
+  /// @brief Set the real part of every complex basic_vec element from the respective element of the supplied real values.
+  /// @param new_reals The basic_vec value of real components to insert into this object.
+  /// @ingroup simd_complex
+  constexpr void real(const real_type& new_reals) noexcept requires detail::complex_number<_Tp>
+    { *this = basic_vec(new_reals, imag()); }
+
+  /// @brief Set the imaginary part of every complex basic_vec element from the respective element of the supplied imaginary values.
+  /// @param new_imags The basic_vec value of imaginary components to insert into this object.
+  /// @ingroup simd_complex
+  constexpr void imag(const real_type& new_imags) noexcept requires detail::complex_number<_Tp>
+    { *this = basic_vec(real(), new_imags); }
+
+#ifdef _XVEC_DEFINE_OUTPUT_OPERATORS
+  /// Output the contents of the simd::vec vector to a standard stream,
+  /// element-by-element.
+  /// \ingroup simd_stream_output
+  friend std::ostream &operator<<(std::ostream& stream, basic_vec value) {
+    // Note that the values are printed in reverse order to match dvec.
+    for (simd_size_type i = 0; i < basic_vec::size; ++i) {
+      const int ri = (basic_vec::size - 1) - i;
+      if (i > 0)
+        stream << ' ';
+      stream << '[' << ri << "]:" << value[ri];
+    }
+    return stream;
+  }
+#endif // _XVEC_DEFINE_OUTPUT_OPERATORS
+};
+
+/// A simd-generic version of simd_bit_cast which direct invokes std::bit_cast.
+template<typename _To, typename _From>
+constexpr auto simd_bit_cast(const _From& v) noexcept { return std::bit_cast<_To>(v); }
+
+/// A simd::vec version of simd_bit_cast which allows reinterpreting the bits of
+/// a simd::vec as elements of a different size.
+template<detail::vectorizable _To, vec_type _From>
+constexpr
+auto simd_bit_cast(const _From& v) noexcept
+{
+  // If the user attempts to convert to a type which cannot form a whole number
+  // of elements from the source then they probably misunderstood what the size
+  // was. In this situation it is more helpful to raise an error to correct the
+  // misunderstanding than have a constraint which prevents the bit cast from
+  // even being matched.
+  static_assert((_From::size() * sizeof(typename _From::value_type)) % sizeof(_To) == 0);
+
+  // Two steps are necessary to figure out the new type - change the element type of the vec while retaining the same abi,
+  // and then resize it to match the bit-size of the original object.
+  constexpr int newNumElements = _From::size() * sizeof(typename _From::value_type) / sizeof(_To);
+  using new_type = vec<_To, newNumElements>;
+  if constexpr (detail::isLlvm)
+    // LLVM/oneAPI are happy to assign any vector type to any other vector type, which is good because bit_cast doesn't work for them.
+    // NOTE: If -flax-vector-conversions is enabled, this line reports an error though. Disable that option in that case.
+    return new_type{v.to_builtin()};
+  else
+    // GCC requires a bit cast to get things to work properly. This code doesn't work on LLVM.
+    return new_type{__builtin_bit_cast(typename new_type::builtin_type, v.to_builtin())};
+}
+
+/// Deduction guide from static extent. Anything span-like, with a compile-time
+/// size which is small enough to fit a vec, and with valid element types can
+/// be turned into a vec.
+template <typename _Span, class... Ts>
+requires (detail::span_extent_v<std::remove_cvref_t<_Span>> 
+            <= detail::max_fixed_size<detail::span_element_type<std::remove_cvref_t<_Span>>>)
+basic_vec(_Span&&, Ts...)
+  -> basic_vec<detail::span_element_type<std::remove_cvref_t<_Span>>, simd_fixed_size_abi<detail::span_extent_v<std::remove_cvref_t<_Span>>>>;
+
+} // namespace _XVEC_NAMESPACE::simd
+
+#include <xvec/detail/named_permute.hpp>
+#include <xvec/detail/loadstore.hpp>
+#include <xvec/detail/invoke.hpp>
+#include <xvec/detail/permute.hpp>
+#include <xvec/detail/split_concat.hpp>
+#include <xvec/detail/std_algorithm.hpp>
+#include <xvec/detail/std_bit.hpp>
+#include <xvec/detail/std_math.hpp>
+#include <xvec/detail/std_complex.hpp>
+#include <xvec/detail/reduce.hpp>
+#include <xvec/detail/std_numeric.hpp>
+#include <xvec/detail/std_utility.hpp>
