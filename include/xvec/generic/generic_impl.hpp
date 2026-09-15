@@ -697,7 +697,7 @@ template<detail::contiguous_sized_range _Range, std::integral _Idx, typename _Id
 constexpr auto gather_from(generic_tag, const _Range& r, const basic_vec<_Idx, _IdxAbi>& indexes, flags<_Flags...> flags)
 {
   using _Tp = std::ranges::range_value_t<_Range>;
-  const auto rmax = _Idx(std::min(r.size(), size_t(std::numeric_limits<_Idx>::max())));
+  const auto rmax = r.size();
 
   if constexpr (contains_flag<flag_unchecked>(flags))
     checkStaticMemoryBounds("gather", indexes, rmax);
@@ -713,7 +713,7 @@ constexpr auto gather_from(generic_tag, const _Range& r, const basic_vec<_Idx, _
   for (int i=0; i<numIndexes; ++i)
   {
     auto idx = indexPtr[i];
-    result[i] = contains_flag<flag_unchecked>(flags) || (idx < rmax) ? r[idx] : _Tp();
+    result[i] = contains_flag<flag_unchecked>(flags) || (idx >= 0 && std::cmp_less(+idx, rmax)) ? r[idx] : _Tp();
   }
 
   return vec<_Tp, numIndexes>(result);
@@ -735,7 +735,7 @@ constexpr auto gather_from(generic_tag, const _Range& r,
                            const basic_vec<_Idx, _IdxAbi>& indexes, flags<_Flags...> flags)
 {
   using _Tp = std::ranges::range_value_t<_Range>;
-  const auto rmax = _Idx(std::min(r.size(), size_t(std::numeric_limits<_Idx>::max())));
+  const auto rmax = r.size();
 
   if constexpr (contains_flag<flag_unchecked>(flags))
     checkStaticMemoryBounds("gather", indexes, rmax, mask);
@@ -754,7 +754,7 @@ constexpr auto gather_from(generic_tag, const _Range& r,
   for (int i=0; i<numIndexes; ++i)
   {
     auto idx = indexPtr[i];
-    bool validIndex = contains_flag<flag_unchecked>(flags) || (idx < rmax);
+    bool validIndex = contains_flag<flag_unchecked>(flags) || (idx >= 0 && std::cmp_less(+idx, rmax));
     result[i] = validIndex && mb[i] ? r[idx] : _Tp();
   }
 
