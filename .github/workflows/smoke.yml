@@ -1,0 +1,52 @@
+name: CMake verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SDE_ARCHIVE: sde-external-10.8.0-2026-03-15-lin.tar.xz
+  SDE_SHA256: 50b320cd226acef7a491f5b321fc1be3c3c7984f9e27a456e64894b5b0979dd3
+  SDE_URL: https://downloadmirror.intel.com/915934/sde-external-10.8.0-2026-03-15-lin.tar.xz
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Clang and Boost.Test
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes clang libboost-test-dev
+
+      - name: Install Intel SDE
+        run: |
+          curl --fail --location --retry 3 --output "/tmp/${SDE_ARCHIVE}" "${SDE_URL}"
+          echo "${SDE_SHA256}  /tmp/${SDE_ARCHIVE}" | sha256sum --check
+          sudo mkdir --parents /opt/intel-sde
+          sudo tar --extract --xz --file "/tmp/${SDE_ARCHIVE}" \
+            --directory /opt/intel-sde --strip-components=1
+          echo "/opt/intel-sde" >> "${GITHUB_PATH}"
+
+      - name: Configure tests
+        run: |
+          cmake -S test -B "${GITHUB_WORKSPACE}/build" \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DXVEC_COMPILER="$(command -v clang++)"
+
+      - name: Build smoke tests
+        run: cmake --build build --parallel --target generic-TestSimdSmoke avx2-TestSimdSmoke avxglc-TestSimdSmoke
+
+      - name: Run smoke tests
+        run: |
+          ctest --test-dir build --tests-regex '^generic/TestSimdSmoke$' --output-on-failure
+          ctest --test-dir build --tests-regex '^avx2/TestSimdSmoke$' --output-on-failure
+          ctest --test-dir build --tests-regex '^avxglc/TestSimdSmoke$' --output-on-failure
