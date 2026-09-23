@@ -1,7 +1,8 @@
 .git
-.github
-.devcontainer
-.vscode
+.devcontainer/*
+!.devcontainer/devcontainer.json
+.vscode/*
+!.vscode/extensions.json
 .idea
 .DS_Store
 Thumbs.db

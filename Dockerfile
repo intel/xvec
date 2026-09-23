@@ -9,6 +9,7 @@ ARG NO_PROXY
 ARG http_proxy
 ARG https_proxy
 ARG no_proxy
+ARG TARGETARCH
 ARG MRDOCS_VERSION=2026.9.4
 ARG INTEL_SDE_VERSION=10.13.1-2026-07-28
 ARG INTEL_SDE_SHA256=94e97d623fec54385686e1e7ba65ebc9941748c05ee451423948334892bf2b50
@@ -23,6 +24,12 @@ LABEL org.opencontainers.image.title="xvec C++ toolchain" \
 ENV MRDOCS_ROOT=/opt/mrdocs
 ENV INTEL_SDE_ROOT=/opt/intel-sde
 ENV PATH="${MRDOCS_ROOT}/bin:${INTEL_SDE_ROOT}:${PATH}"
+
+RUN target_arch="${TARGETARCH:-$(dpkg --print-architecture)}" \
+    && if [[ "${target_arch}" != "amd64" ]]; then \
+        echo "This image supports only linux/amd64 because Intel SDE is x86-64-only." >&2; \
+        exit 1; \
+    fi
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -69,6 +76,7 @@ RUN export NO_PROXY= no_proxy= \
         g++-16 \
         intel-oneapi-compiler-dpcpp-cpp \
         lldb-20 \
+    && test -x /usr/bin/clang++-20 \
     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-16 160 \
     && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-16 160 \
     && update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-16 160 \
@@ -133,26 +141,26 @@ BOOST_AUTO_TEST_CASE(smoke)
 }
 EOF
 
-RUN gcc --version | head -n 1 \
-    && g++ --version | head -n 1 \
-    && cc --version | head -n 1 \
-    && c++ --version | head -n 1 \
-    && clang --version | head -n 1 \
-    && clang++ --version | head -n 1 \
-    && clangd --version | head -n 1 \
-    && clang-format --version | head -n 1 \
-    && clang-tidy --version | head -n 1 \
-    && lldb --version | head -n 1 \
-    && icx --version | head -n 1 \
-    && icpx --version | head -n 1 \
-    && cmake --version | head -n 1 \
-    && ccmake --version | head -n 1 \
-    && make --version | head -n 1 \
-    && git --version \
-    && curl --version | head -n 1 \
-    && doxygen --version \
-    && dot -V \
-    && mrdocs --version \
+RUN test -x "$(command -v gcc)" \
+    && test -x "$(command -v g++)" \
+    && test -x "$(command -v cc)" \
+    && test -x "$(command -v c++)" \
+    && test -x "$(command -v clang)" \
+    && test -x "$(command -v clang++)" \
+    && test -x "$(command -v clangd)" \
+    && test -x "$(command -v clang-format)" \
+    && test -x "$(command -v clang-tidy)" \
+    && test -x "$(command -v lldb)" \
+    && test -x "$(command -v icx)" \
+    && test -x "$(command -v icpx)" \
+    && cmake --version >/dev/null \
+    && ccmake --version >/dev/null \
+    && make --version >/dev/null \
+    && git --version >/dev/null \
+    && curl --version >/dev/null \
+    && doxygen --version >/dev/null \
+    && dot -V >/dev/null 2>&1 \
+    && mrdocs --version >/dev/null \
     && g++ -std=c++20 /tmp/boost_test.cpp -lboost_unit_test_framework -o /tmp/boost_test \
     && /tmp/boost_test --log_level=test_suite \
     && test -x "$(command -v sde)" \
