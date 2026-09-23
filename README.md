@@ -180,6 +180,10 @@ The full documentation includes the API reference, guides, and worked examples:
 The documentation is generated from the source using Doxygen and published from
 the `main` branch.
 
+For the containerized development environment, GHCR toolchain image, and VS Code
+Dev Containers workflow, see
+[docs/development-container.md](docs/development-container.md).
+
 ## Releases and compatibility
 
 The `main` branch contains the latest development version. It is continuously
