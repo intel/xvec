@@ -92,14 +92,16 @@ The default build directory is `build/`. Configure and build with CMake or
 `ccmake`:
 
 ```bash
-cmake -S test -B build -DCMAKE_CXX_COMPILER="${CXX:-g++}"
+cmake -S test -B build -DCMAKE_CXX_COMPILER="${CXX:-icpx}"
 cmake --build build --parallel
 ```
 
 To adjust cache entries interactively, run `ccmake -S test -B build`.
 
-To choose a different compiler, set `CC` and `CXX` before configuring a fresh
-build directory. Typical examples are `clang`/`clang++` or `icx`/`icpx`.
+The dev container defaults to the Intel oneAPI DPC++/C++ compiler
+(`CC=icx`, `CXX=icpx`). To choose a different compiler, set `CC` and `CXX`
+before configuring a fresh build directory. Typical examples are
+`gcc`/`g++` or `clang`/`clang++`.
 
 The image is built only for `linux/amd64` because Intel SDE is distributed for
 x86-64 Linux. Codespaces can consume the same dev-container definition, but SDE
