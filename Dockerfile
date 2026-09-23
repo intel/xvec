@@ -114,6 +114,9 @@ RUN export NO_PROXY= no_proxy= \
     && rm -f /tmp/intel-sde.tar.xz \
     && test -x "${INTEL_SDE_ROOT}/sde64" \
     && test -x "${INTEL_SDE_ROOT}/xed64" \
+    && find "${INTEL_SDE_ROOT}" -maxdepth 2 -type f \
+        \( -iname 'LICENSE*' -o -iname 'third-party-programs.txt' \) \
+        | grep -q . \
     && ln -sf "${INTEL_SDE_ROOT}/sde64" /usr/local/bin/sde \
     && ln -sf "${INTEL_SDE_ROOT}/sde64" /usr/local/bin/sde64 \
     && ln -sf "${INTEL_SDE_ROOT}/xed64" /usr/local/bin/xed \
@@ -156,6 +159,9 @@ RUN gcc --version | head -n 1 \
     && test -x "$(command -v sde64)" \
     && test -x "$(command -v xed)" \
     && test -x "$(command -v xed64)" \
+    && find "${INTEL_SDE_ROOT}" -maxdepth 2 -type f \
+        \( -iname 'LICENSE*' -o -iname 'third-party-programs.txt' \) \
+        | grep -q . \
     && test "$(gcc -dumpversion | cut -d. -f1)" = "16" \
     && test "$(clang -dumpversion | cut -d. -f1)" = "20" \
     && rm -f /tmp/boost_test.cpp /tmp/boost_test

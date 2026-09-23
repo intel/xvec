@@ -56,7 +56,10 @@ DEALINGS IN THE SOFTWARE.
    Download source used by the image build:
    https://downloadmirror.intel.com/924984/sde-external-10.13.1-2026-07-28-lin.tar.xz
    License and redistribution terms are supplied by Intel with the downloaded
-   package. Public redistribution status should be confirmed with Intel or legal
-   counsel before making any published image broadly accessible.
+   package and preserved in the extracted image contents. Mirrored copies of the
+   bundled SDE license materials indicate that redistribution of the unmodified
+   package may be allowed when notices are reproduced, but the exact pinned
+   release terms should still be confirmed with Intel or legal counsel before
+   making any published image broadly accessible.
 
 -------------------------------------------------------------------------------

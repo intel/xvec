@@ -122,7 +122,11 @@ pull the image when the package is private.
 
 ## Intel SDE redistribution note
 
-The image bundles Intel SDE for development and test workflows, but this
-repository does not currently assert that public redistribution rights for SDE
-have been confirmed. Keep the GHCR package private until Intel or your legal
-team confirms that the SDE license terms allow the intended redistribution.
+The image bundles Intel SDE for development and test workflows, and the
+extracted SDE kit preserves Intel's bundled `Licenses/` materials inside the
+image. A mirrored copy of Intel's bundled SDE license text indicates that
+redistribution of the unmodified package may be allowed when the notices and
+terms are reproduced, but that conclusion has not been re-verified against the
+exact pinned `10.13.1-2026-07-28` archive from Intel in this repository
+workflow. Keep the GHCR package private until Intel or your legal team confirms
+that the intended public redistribution is acceptable for the pinned release.
