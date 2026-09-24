@@ -26,7 +26,6 @@ ENV MRDOCS_ROOT=/opt/mrdocs
 ENV INTEL_SDE_ROOT=/opt/intel-sde
 ENV ONEAPI_ROOT=/opt/intel/oneapi
 ENV PATH="${MRDOCS_ROOT}/bin:${INTEL_SDE_ROOT}:${ONEAPI_ROOT}/compiler/latest/bin:${PATH}"
-ENV LD_LIBRARY_PATH="${ONEAPI_ROOT}/compiler/latest/lib:${ONEAPI_ROOT}/compiler/latest/lib/x64:${ONEAPI_ROOT}/compiler/latest/opt/compiler/lib"
 
 RUN target_arch="${TARGETARCH:-$(dpkg --print-architecture)}" \
     && if [[ "${target_arch}" != "amd64" ]]; then \
@@ -95,14 +94,20 @@ RUN export NO_PROXY= no_proxy= \
     && test -f /opt/intel/oneapi/compiler/latest/env/vars.sh \
     && ln -sf /opt/intel/oneapi/compiler/latest/env/vars.sh /etc/profile.d/20-intel-oneapi-compiler.sh \
     && printf '%s\n' '#!/bin/bash' \
-        'source /opt/intel/oneapi/compiler/latest/env/vars.sh >/dev/null' \
-        'exec /opt/intel/oneapi/compiler/latest/bin/icx "$@"' \
-        > /usr/local/bin/icx \
+        'export LD_LIBRARY_PATH="/opt/intel/oneapi/compiler/latest/lib:/opt/intel/oneapi/compiler/latest/lib/x64:/opt/intel/oneapi/compiler/latest/opt/compiler/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"' \
+        'exec "$@"' \
+        > /usr/local/bin/xvec-entrypoint \
     && printf '%s\n' '#!/bin/bash' \
         'source /opt/intel/oneapi/compiler/latest/env/vars.sh >/dev/null' \
-        'exec /opt/intel/oneapi/compiler/latest/bin/icpx "$@"' \
+        'exec "$@"' \
+        > /usr/local/bin/intel-oneapi-compiler-wrapper \
+    && printf '%s\n' '#!/bin/bash' \
+        'exec /usr/local/bin/intel-oneapi-compiler-wrapper /opt/intel/oneapi/compiler/latest/bin/icx "$@"' \
+        > /usr/local/bin/icx \
+    && printf '%s\n' '#!/bin/bash' \
+        'exec /usr/local/bin/intel-oneapi-compiler-wrapper /opt/intel/oneapi/compiler/latest/bin/icpx "$@"' \
         > /usr/local/bin/icpx \
-    && chmod 0755 /usr/local/bin/icx /usr/local/bin/icpx \
+    && chmod 0755 /usr/local/bin/xvec-entrypoint /usr/local/bin/intel-oneapi-compiler-wrapper /usr/local/bin/icx /usr/local/bin/icpx \
     && rm -f /tmp/llvm.key /tmp/intel-oneapi.key \
     && rm -rf /var/lib/apt/lists/*
 
@@ -189,7 +194,7 @@ RUN test -x "$(command -v gcc)" \
     && g++ -std=c++20 /tmp/boost_test.cpp -lboost_unit_test_framework -o /tmp/boost_test \
     && /tmp/boost_test --log_level=test_suite \
     && icpx -std=c++20 -fopenmp /tmp/icpx_smoke.cpp -o /tmp/icpx_smoke \
-    && /tmp/icpx_smoke \
+    && LD_LIBRARY_PATH="/opt/intel/oneapi/compiler/latest/lib:/opt/intel/oneapi/compiler/latest/lib/x64:/opt/intel/oneapi/compiler/latest/opt/compiler/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" /tmp/icpx_smoke \
     && test -x "$(command -v sde)" \
     && test -x "$(command -v sde64)" \
     && test -x "$(command -v xed)" \
@@ -201,4 +206,5 @@ RUN test -x "$(command -v gcc)" \
     && test "$(clang -dumpversion | cut -d. -f1)" = "20" \
     && rm -f /tmp/boost_test.cpp /tmp/boost_test /tmp/icpx_smoke.cpp /tmp/icpx_smoke
 
+ENTRYPOINT ["/usr/local/bin/xvec-entrypoint"]
 CMD ["/bin/bash"]
