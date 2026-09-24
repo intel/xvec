@@ -24,7 +24,9 @@ LABEL org.opencontainers.image.title="xvec C++ toolchain" \
 
 ENV MRDOCS_ROOT=/opt/mrdocs
 ENV INTEL_SDE_ROOT=/opt/intel-sde
-ENV PATH="${MRDOCS_ROOT}/bin:${INTEL_SDE_ROOT}:${PATH}"
+ENV ONEAPI_ROOT=/opt/intel/oneapi
+ENV PATH="${MRDOCS_ROOT}/bin:${INTEL_SDE_ROOT}:${ONEAPI_ROOT}/compiler/latest/bin:${PATH}"
+ENV LD_LIBRARY_PATH="${ONEAPI_ROOT}/compiler/latest/lib:${ONEAPI_ROOT}/compiler/latest/lib/x64:${ONEAPI_ROOT}/compiler/latest/opt/compiler/lib"
 
 RUN target_arch="${TARGETARCH:-$(dpkg --print-architecture)}" \
     && if [[ "${target_arch}" != "amd64" ]]; then \
@@ -90,8 +92,17 @@ RUN export NO_PROXY= no_proxy= \
     && update-alternatives --install /usr/bin/lldb lldb /usr/bin/lldb-20 200 \
     && test -x /opt/intel/oneapi/compiler/latest/bin/icx \
     && test -x /opt/intel/oneapi/compiler/latest/bin/icpx \
-    && ln -sf /opt/intel/oneapi/compiler/latest/bin/icx /usr/local/bin/icx \
-    && ln -sf /opt/intel/oneapi/compiler/latest/bin/icpx /usr/local/bin/icpx \
+    && test -f /opt/intel/oneapi/compiler/latest/env/vars.sh \
+    && ln -sf /opt/intel/oneapi/compiler/latest/env/vars.sh /etc/profile.d/20-intel-oneapi-compiler.sh \
+    && printf '%s\n' '#!/bin/bash' \
+        'source /opt/intel/oneapi/compiler/latest/env/vars.sh >/dev/null' \
+        'exec /opt/intel/oneapi/compiler/latest/bin/icx "$@"' \
+        > /usr/local/bin/icx \
+    && printf '%s\n' '#!/bin/bash' \
+        'source /opt/intel/oneapi/compiler/latest/env/vars.sh >/dev/null' \
+        'exec /opt/intel/oneapi/compiler/latest/bin/icpx "$@"' \
+        > /usr/local/bin/icpx \
+    && chmod 0755 /usr/local/bin/icx /usr/local/bin/icpx \
     && rm -f /tmp/llvm.key /tmp/intel-oneapi.key \
     && rm -rf /var/lib/apt/lists/*
 
@@ -143,6 +154,18 @@ BOOST_AUTO_TEST_CASE(smoke)
 }
 EOF
 
+RUN cat <<'EOF' >/tmp/icpx_smoke.cpp
+#include <omp.h>
+
+int main()
+{
+  int value = 0;
+#pragma omp parallel reduction(+:value)
+  value += 1;
+  return value > 0 ? 0 : 1;
+}
+EOF
+
 RUN test -x "$(command -v gcc)" \
     && test -x "$(command -v g++)" \
     && test -x "$(command -v cc)" \
@@ -165,6 +188,8 @@ RUN test -x "$(command -v gcc)" \
     && mrdocs --version >/dev/null \
     && g++ -std=c++20 /tmp/boost_test.cpp -lboost_unit_test_framework -o /tmp/boost_test \
     && /tmp/boost_test --log_level=test_suite \
+    && icpx -std=c++20 -fopenmp /tmp/icpx_smoke.cpp -o /tmp/icpx_smoke \
+    && /tmp/icpx_smoke \
     && test -x "$(command -v sde)" \
     && test -x "$(command -v sde64)" \
     && test -x "$(command -v xed)" \
@@ -174,6 +199,6 @@ RUN test -x "$(command -v gcc)" \
         | grep -q . \
     && test "$(gcc -dumpversion | cut -d. -f1)" = "16" \
     && test "$(clang -dumpversion | cut -d. -f1)" = "20" \
-    && rm -f /tmp/boost_test.cpp /tmp/boost_test
+    && rm -f /tmp/boost_test.cpp /tmp/boost_test /tmp/icpx_smoke.cpp /tmp/icpx_smoke
 
 CMD ["/bin/bash"]
