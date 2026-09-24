@@ -11,6 +11,7 @@ ARG https_proxy
 ARG no_proxy
 ARG TARGETARCH
 ARG MRDOCS_VERSION=2026.9.4
+ARG MRDOCS_SHA256=be1fbbc516233fe7cc87f66c735b9dbbd23e4bcfadfda705503daac5b6f42ed8
 ARG INTEL_SDE_VERSION=10.13.1-2026-07-28
 ARG INTEL_SDE_SHA256=94e97d623fec54385686e1e7ba65ebc9941748c05ee451423948334892bf2b50
 
@@ -99,6 +100,7 @@ RUN export NO_PROXY= no_proxy= \
     && curl --fail --show-error --location --retry 3 \
         "https://github.com/cppalliance/mrdocs/releases/download/${MRDOCS_VERSION}/MrDocs-${MRDOCS_VERSION}-Linux.tar.gz" \
         -o /tmp/mrdocs.tar.gz \
+    && echo "${MRDOCS_SHA256}  /tmp/mrdocs.tar.gz" | sha256sum --check \
     && tar --extract --gzip \
         --file=/tmp/mrdocs.tar.gz \
         --directory="${MRDOCS_ROOT}" \
