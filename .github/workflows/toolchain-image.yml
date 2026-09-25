@@ -1,0 +1,115 @@
+name: Toolchain image
+
+on:
+  pull_request:
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - .devcontainer/devcontainer.json
+      - .vscode/extensions.json
+      - .github/workflows/toolchain-image.yml
+      - docs/development-container.md
+      - README.md
+      - third-party-programs.txt
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - .devcontainer/devcontainer.json
+      - .vscode/extensions.json
+      - .github/workflows/toolchain-image.yml
+      - docs/development-container.md
+      - README.md
+      - third-party-programs.txt
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: none
+
+concurrency:
+  group: toolchain-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Validate dev-container metadata
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path(".")
+          for rel in [".devcontainer/devcontainer.json", ".vscode/extensions.json"]:
+              json.loads((root / rel).read_text())
+
+          doc = (root / "docs/development-container.md").read_text()
+          readme = (root / "README.md").read_text()
+          third_party = (root / "third-party-programs.txt").read_text()
+          assert "ghcr.io/intel/xvec-toolchain:latest" in doc
+          assert "docs/development-container.md" in readme
+          assert "Intel(R) Software Development Emulator" in third_party
+          PY
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build toolchain image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
+
+  publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/intel/xvec-toolchain
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=sha,format=short
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish toolchain image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true

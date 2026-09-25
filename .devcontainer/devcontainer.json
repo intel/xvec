@@ -1,0 +1,40 @@
+{
+  "name": "xvec C++ Toolchain",
+  "image": "ghcr.io/intel/xvec-toolchain:latest",
+  "containerUser": "root",
+  "remoteEnv": {
+    "CC": "icx",
+    "CXX": "icpx"
+  },
+  "runArgs": [
+    "--cap-add=SYS_PTRACE",
+    "--security-opt=seccomp=unconfined"
+  ],
+  "postCreateCommand": "bash -lc 'git --version && cmake --version && ccmake --version && clangd --version && doxygen --version && mrdocs --version && sde64 -help >/dev/null'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "llvm-vs-code-extensions.vscode-clangd",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools",
+        "xaver.clang-format",
+        "twxs.cmake",
+        "streetsidesoftware.code-spell-checker"
+      ],
+      "settings": {
+        "C_Cpp.intelliSenseEngine": "disabled",
+        "clangd.path": "/usr/bin/clangd",
+        "clangd.arguments": [
+          "--background-index",
+          "--clang-tidy"
+        ],
+        "cmake.generator": "Unix Makefiles",
+        "cmake.buildDirectory": "${workspaceFolder}/build",
+        "cmake.configureEnvironment": {
+          "CC": "icx",
+          "CXX": "icpx"
+        }
+      }
+    }
+  }
+}

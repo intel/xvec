@@ -40,3 +40,26 @@ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
 -------------------------------------------------------------------------------
+
+2. MrDocs
+   Redistributed in the xvec development container image from the official
+   prebuilt Linux release available at
+   https://github.com/cppalliance/mrdocs/releases.
+   Upstream project: https://github.com/cppalliance/mrdocs
+   License: Apache License v2.0 with LLVM Exceptions
+
+-------------------------------------------------------------------------------
+
+3. Intel(R) Software Development Emulator (Intel(R) SDE)
+   Included in the xvec development container image for x86-64 development and
+   test workflows.
+   Download source used by the image build:
+   https://downloadmirror.intel.com/924984/sde-external-10.13.1-2026-07-28-lin.tar.xz
+   License and redistribution terms are supplied by Intel with the downloaded
+   package and preserved in the extracted image contents. Mirrored copies of the
+   bundled SDE license materials indicate that redistribution of the unmodified
+   package may be allowed when notices are reproduced, but the exact pinned
+   release terms should still be confirmed with Intel or legal counsel before
+   making any published image broadly accessible.
+
+-------------------------------------------------------------------------------
