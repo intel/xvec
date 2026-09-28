@@ -3,6 +3,7 @@
 [![Documentation](https://github.com/intel/xvec/actions/workflows/docs.yml/badge.svg)](https://github.com/intel/xvec/actions/workflows/docs.yml)
 [![SmokeTest verification](https://github.com/intel/xvec/actions/workflows/smoke.yml/badge.svg)](https://github.com/intel/xvec/actions/workflows/smoke.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0_WITH_LLVM--exception-blue.svg)](LICENSE.txt)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/intel/xvec/badge)](https://securityscorecards.dev/viewer/?uri=github.com/intel/xvec)
 
 xvec is a header-only implementation of the C++26 data-parallel library,
 commonly known as `std::simd`. It provides vector and mask types for expressing
