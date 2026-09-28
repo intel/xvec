@@ -34,6 +34,8 @@ jobs:
           curl --fail --location --proto '=https' --tlsv1.2 \
             --output "${RUNNER_TEMP}/${archive}" \
             "https://github.com/cppalliance/mrdocs/releases/download/${version}/${archive}"
+          echo "be1fbbc516233fe7cc87f66c735b9dbbd23e4bcfadfda705503daac5b6f42ed8  ${RUNNER_TEMP}/${archive}" \
+            | sha256sum --check
           tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}"
           mrdocs="$(find "${RUNNER_TEMP}" -type f -name mrdocs -print -quit)"
           test -n "${mrdocs}"
