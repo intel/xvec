@@ -25,23 +25,51 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install Doxygen
+      - name: Install MrDocs
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends --yes doxygen
+          set -euo pipefail
+          version=2026.9.4
+          archive="MrDocs-${version}-Linux.tar.gz"
+          curl --fail --location --proto '=https' --tlsv1.2 \
+            --output "${RUNNER_TEMP}/${archive}" \
+            "https://github.com/cppalliance/mrdocs/releases/download/${version}/${archive}"
+          tar -xzf "${RUNNER_TEMP}/${archive}" -C "${RUNNER_TEMP}"
+          mrdocs="$(find "${RUNNER_TEMP}" -type f -name mrdocs -print -quit)"
+          test -n "${mrdocs}"
+          chmod +x "${mrdocs}"
+          echo "MRDOCS=${mrdocs}" >> "${GITHUB_ENV}"
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
       - name: Generate docs
+        shell: bash
         run: |
-          mkdir -p docs/doxygen
-          doxygen Doxyfile
+          set -euo pipefail
+          printf '#include <xvec/simd>\n' > "${GITHUB_WORKSPACE}/.mrdocs.cpp"
+          cat > "${RUNNER_TEMP}/compile_commands.json" <<'EOF'
+          [
+            {
+              "directory": "${MRDOCS_SOURCE_ROOT}",
+              "command": "clang++ -std=c++20 -I${MRDOCS_SOURCE_ROOT}/include -c ${MRDOCS_SOURCE_ROOT}/.mrdocs.cpp -o ${MRDOCS_SOURCE_ROOT}/.mrdocs.o",
+              "file": "${MRDOCS_SOURCE_ROOT}/.mrdocs.cpp"
+            }
+          ]
+          EOF
+          cat > "${RUNNER_TEMP}/mrdocs.yml" <<EOF
+          source-root: ${GITHUB_WORKSPACE}
+          compilation-database: ${RUNNER_TEMP}/compile_commands.json
+          EOF
+          "${MRDOCS}" \
+            --config="${RUNNER_TEMP}/mrdocs.yml" \
+            --generator=html \
+            --output="${GITHUB_WORKSPACE}/docs/mrdocs"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
-          path: docs/doxygen/html
+          path: docs/mrdocs
 
   deploy:
     needs: build
