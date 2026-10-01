@@ -1,6 +1,6 @@
 //===----------------------------------------------------------------------===//
 //
-// Copyright (C) 2021 Intel Corporation
+// Copyright (C) Intel Corporation
 //
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
@@ -29,30 +29,40 @@ constexpr std::array<_Tp, _MemSize> build_memory() {
 BOOST_AUTO_TEST_CASE_TEMPLATE(GatherFromContiguousRange, TypeParam, AllSimdTypes)
 {
   using xvec::rebind_cast;
-  
-  // Create a contiguous lookup table, and a range into that memory which is
-  // half the size. The gather should only permit values in the range to be
-  // read, not those in the whole table.
-  constexpr int memorySize = 1024;
-  const auto memTable = build_memory<typename TypeParam::value_type, memorySize>();
-  constexpr int rangeSize = 200;
-  const auto table = std::ranges::subrange(memTable.begin(), memTable.begin() + rangeSize);
 
-  // Create a set of random indexes into the entire memory table, not just the smaller range.
-  const auto indexes = GetRandomVector<xvec::simd::vec<unsigned short, TypeParam::size>>(memorySize - 1);
+  using _Tp = typename TypeParam::value_type;
 
-  const auto checkedExpected = applyUnary(indexes, [=](auto idx) { return idx < rangeSize ? memTable[idx] : typename TypeParam::value_type(); });
-  const auto uncheckedExpected = applyUnary(indexes, [=](auto idx) { return memTable[idx]; });
-  const auto expectedByteIndexed = applyUnary(indexes, [=](auto idx) { return (idx & 0xff) < rangeSize ? memTable[idx & 0xff] : typename TypeParam::value_type(); });
+  // Create a backing allocation containing a smaller readable range.
+  constexpr int memorySize = 256;
+  const auto memTable = build_memory<_Tp, memorySize>();
 
-  // Gather using 4 different index sizes.
-  BOOST_SIMD_EQUAL(partial_gather_from(table, rebind_cast<uint8_t>(indexes)), expectedByteIndexed);
-  BOOST_SIMD_EQUAL(partial_gather_from(table, rebind_cast<uint16_t>(indexes)), checkedExpected);
-  BOOST_SIMD_EQUAL(partial_gather_from(table, rebind_cast<uint32_t>(indexes)), checkedExpected);
-  BOOST_SIMD_EQUAL(partial_gather_from(table, rebind_cast<uint64_t>(indexes)), checkedExpected);
+  constexpr int tableOffset = 44; // Allow space before the range for negative indexes.
+  constexpr int rangeSize = 100;
+  constexpr int maximumIndex = 127;
+  const auto table = std::ranges::subrange(memTable.begin() + tableOffset, memTable.begin() + tableOffset + rangeSize);
 
-  // One unchecked variant - it uses the same pathway through the functions, just with a different check flag.
-  BOOST_SIMD_EQUAL(unchecked_gather_from(table, rebind_cast<uint64_t>(indexes)), uncheckedExpected);
+  // Most random indexes are valid, while values from 100 through 127 exercise
+  // the upper bound. Every value remains representable by a signed byte.
+  auto indexes = rebind_cast<short>(GetRandomVector<xvec::simd::vec<unsigned short, TypeParam::size>>(maximumIndex));
+  indexes = set_element(indexes, 0, -2);
+
+  // Generate the expected values for every index width.
+  const auto checkedExpected = applyUnary(indexes, [=](auto idx) {
+    return idx >= 0 && idx < rangeSize ? table[idx] : _Tp{};
+  });
+  const auto uncheckedExpected = applyUnary(indexes, [=](auto idx) {
+    return memTable[tableOffset + idx];
+  });
+
+  // Gather using four different signed index sizes.
+  BOOST_SIMD_EQUAL(partial_gather_from(table, rebind_cast<int8_t>(indexes)), checkedExpected);
+  BOOST_SIMD_EQUAL(partial_gather_from(table, rebind_cast<int16_t>(indexes)), checkedExpected);
+  BOOST_SIMD_EQUAL(partial_gather_from(table, rebind_cast<int32_t>(indexes)), checkedExpected);
+  BOOST_SIMD_EQUAL(partial_gather_from(table, rebind_cast<int64_t>(indexes)), checkedExpected);
+
+  // The unchecked variant may read outside the logical range, but every index
+  // still addresses valid storage in the backing allocation.
+  BOOST_SIMD_EQUAL(unchecked_gather_from(table, rebind_cast<int64_t>(indexes)), uncheckedExpected);
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(GatherFromContiguousRangeWithConversion, TypeParam, LoadableSimdTypes)
@@ -61,68 +71,81 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(GatherFromContiguousRangeWithConversion, TypeParam
 
   using _Tp = typename TypeParam::value_type;
 
-  // Create a contiguous lookup table of bytes (since they can be converted into
-  // any other loadable type), and a range into that memory which is half the
-  // size. The gather should only permit values in the range to be read, not
-  // those in the whole table.
-  constexpr int memorySize = 1024;
+  // Create a backing allocation of bytes containing a smaller readable range.
+  constexpr int memorySize = 256;
   const auto memTable = build_memory<int8_t, memorySize>();
-  constexpr int rangeSize = 200;
-  const auto table = std::ranges::subrange(memTable.begin(), memTable.begin() + rangeSize);
 
-  // Create a set of random indexes into the entire memory table, not just the smaller range.
-  const auto indexes = GetRandomVector<xvec::simd::vec<unsigned short, TypeParam::size>>(memorySize - 1);
+  constexpr int tableOffset = 44; // Allow space before the range for negative indexes.
+  constexpr int rangeSize = 100;
+  constexpr int maximumIndex = 127;
+  const auto table = std::ranges::subrange(memTable.begin() + tableOffset, memTable.begin() + tableOffset + rangeSize);
 
-  const auto checkedExpected = applyUnary(indexes, [=](auto idx) -> _Tp { return idx < rangeSize ? memTable[idx] : _Tp(); });
-  const auto uncheckedExpected = applyUnary(indexes, [=](auto idx) -> _Tp { return memTable[idx]; });
-  const auto expectedByteIndexed = applyUnary(indexes, [=](auto idx) -> _Tp { return (idx & 0xff) < rangeSize ? memTable[idx & 0xff] : _Tp(); });
+  // Most random indexes are valid, while values from 100 through 127 exercise
+  // the upper bound. Every value remains representable by a signed byte.
+  auto indexes = rebind_cast<short>(GetRandomVector<xvec::simd::vec<unsigned short, TypeParam::size>>(maximumIndex));
+  indexes = set_element(indexes, 0, -2);
 
-  // Gather using 4 different index sizes.
-  BOOST_SIMD_EQUAL(partial_gather_from<TypeParam>(table, rebind_cast<uint8_t>(indexes), xvec::simd::flag_convert), expectedByteIndexed);
-  BOOST_SIMD_EQUAL(partial_gather_from<TypeParam>(table, rebind_cast<uint16_t>(indexes), xvec::simd::flag_convert), checkedExpected);
-  BOOST_SIMD_EQUAL(partial_gather_from<TypeParam>(table, rebind_cast<uint32_t>(indexes), xvec::simd::flag_convert), checkedExpected);
-  BOOST_SIMD_EQUAL(partial_gather_from<TypeParam>(table, rebind_cast<uint64_t>(indexes), xvec::simd::flag_convert), checkedExpected);
+  // Generate the expected converted values for every index width.
+  const auto checkedExpected = applyUnary(indexes, [=](auto idx) -> _Tp {
+    return idx >= 0 && idx < rangeSize ? table[idx] : _Tp{};
+  });
+  const auto uncheckedExpected = applyUnary(indexes, [=](auto idx) -> _Tp {
+    return memTable[tableOffset + idx];
+  });
 
-  // One unchecked variant - it uses the same pathway through the functions, just with a different check flag.
-  BOOST_SIMD_EQUAL(unchecked_gather_from<TypeParam>(table, rebind_cast<uint64_t>(indexes), xvec::simd::flag_convert), uncheckedExpected);
+  // Gather using four different signed index sizes.
+  BOOST_SIMD_EQUAL(partial_gather_from<TypeParam>(table, rebind_cast<int8_t>(indexes), xvec::simd::flag_convert), checkedExpected);
+  BOOST_SIMD_EQUAL(partial_gather_from<TypeParam>(table, rebind_cast<int16_t>(indexes), xvec::simd::flag_convert), checkedExpected);
+  BOOST_SIMD_EQUAL(partial_gather_from<TypeParam>(table, rebind_cast<int32_t>(indexes), xvec::simd::flag_convert), checkedExpected);
+  BOOST_SIMD_EQUAL(partial_gather_from<TypeParam>(table, rebind_cast<int64_t>(indexes), xvec::simd::flag_convert), checkedExpected);
+
+  // The unchecked variant may read outside the logical range, but every index
+  // still addresses valid storage in the backing allocation.
+  BOOST_SIMD_EQUAL(unchecked_gather_from<TypeParam>(table, rebind_cast<int64_t>(indexes), xvec::simd::flag_convert), uncheckedExpected);
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(MaskedGatherFromContiguousRange, TypeParam, AllSimdTypes)
 {
   using xvec::rebind_cast;
 
-  // Create a contiguous lookup table.
-  constexpr int memorySize = 1024;
-  const auto memTable = build_memory<typename TypeParam::value_type, memorySize>();
-  constexpr int rangeSize = 200;
-  const auto table = std::ranges::subrange(memTable.begin(), memTable.begin() + rangeSize);
+  using _Tp = typename TypeParam::value_type;
 
-  // Create a set of random indexes into the memory from which to read.
-  const auto indexes = GetRandomVector<xvec::simd::vec<unsigned short, TypeParam::size>>(memorySize - 1);
+  // Create a backing allocation containing a smaller readable range.
+  constexpr int memorySize = 256;
+  const auto memTable = build_memory<_Tp, memorySize>();
 
-  // Create a random mask.
+  constexpr int tableOffset = 44; // Allow space before the range for negative indexes.
+  constexpr int rangeSize = 100;
+  constexpr int maximumIndex = 127;
+  const auto table = std::ranges::subrange(memTable.begin() + tableOffset, memTable.begin() + tableOffset + rangeSize);
+
+  // Most random indexes are valid, while values from 100 through 127 exercise
+  // the upper bound. Every value remains representable by a signed byte.
+  auto indexes = rebind_cast<short>(GetRandomVector<xvec::simd::vec<unsigned short, TypeParam::size>>(maximumIndex));
+  indexes = set_element(indexes, 0, -2);
+
+  // Create a random mask and ensure the negative index is enabled.
   auto maskBits = getRandomBitset<TypeParam::size>();
-  auto mask = xvec::simd::mask<unsigned short, TypeParam::size>(maskBits);
+  maskBits[0] = true;
+  const auto mask = xvec::simd::mask<unsigned short, TypeParam::size>(maskBits);
 
-  auto expected = TypeParam([=](auto i) {
-    return (maskBits[i] && indexes[i] < rangeSize) ? table[indexes[i]] : typename TypeParam::value_type{};
+  // Generate the expected values for every index width.
+  const auto expected = TypeParam([=](auto i) {
+    return maskBits[i] && indexes[i] >= 0 && indexes[i] < rangeSize ? table[indexes[i]] : _Tp{};
   });
-  auto expectedByteIndexed = TypeParam([=](auto i) {
-    return maskBits[i] && ((indexes[i] & 0xFF) < rangeSize) ? table[indexes[i] & 0xFF] : typename TypeParam::value_type{};
-  });
 
-  auto indexesAs8 = rebind_cast<uint8_t>(indexes);
-  BOOST_SIMD_EQUAL(partial_gather_from(table, typename decltype(indexesAs8)::mask_type(mask), indexesAs8), expectedByteIndexed);
+  // Masked gather using four different signed index sizes.
+  const auto indexesAs8 = rebind_cast<int8_t>(indexes);
+  BOOST_SIMD_EQUAL(partial_gather_from(table, typename decltype(indexesAs8)::mask_type(mask), indexesAs8), expected);
 
-  auto indexesAs16 = rebind_cast<uint16_t>(indexes);
+  const auto indexesAs16 = rebind_cast<int16_t>(indexes);
   BOOST_SIMD_EQUAL(partial_gather_from(table, typename decltype(indexesAs16)::mask_type(mask), indexesAs16), expected);
 
-  auto indexesAs32 = rebind_cast<uint32_t>(indexes);
+  const auto indexesAs32 = rebind_cast<int32_t>(indexes);
   BOOST_SIMD_EQUAL(partial_gather_from(table, typename decltype(indexesAs32)::mask_type(mask), indexesAs32), expected);
 
-  auto indexesAs64 = rebind_cast<uint64_t>(indexes);
+  const auto indexesAs64 = rebind_cast<int64_t>(indexes);
   BOOST_SIMD_EQUAL(partial_gather_from(table, typename decltype(indexesAs64)::mask_type(mask), indexesAs64), expected);
-
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(MaskedGatherFromContiguousRangeWithConversion, TypeParam, LoadableSimdTypes)
@@ -131,44 +154,49 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(MaskedGatherFromContiguousRangeWithConversion, Typ
 
   using _Tp = typename TypeParam::value_type;
 
-  // Create a contiguous lookup table from bytes, which can be converted to all the other types.
-  constexpr int memorySize = 1024;
+  // Create a backing allocation of bytes containing a smaller readable range.
+  constexpr int memorySize = 256;
   const auto memTable = build_memory<int8_t, memorySize>();
-  constexpr int rangeSize = 200;
-  const auto table = std::ranges::subrange(memTable.begin(), memTable.begin() + rangeSize);
 
-  // Create a set of random indexes into the memory from which to read.
-  const auto indexes = GetRandomVector<xvec::simd::vec<unsigned short, TypeParam::size>>(memorySize - 1);
+  constexpr int tableOffset = 44; // Allow space before the range for negative indexes.
+  constexpr int rangeSize = 100;
+  constexpr int maximumIndex = 127;
+  const auto table = std::ranges::subrange(memTable.begin() + tableOffset, memTable.begin() + tableOffset + rangeSize);
 
-  // Create a random mask.
+  // Most random indexes are valid, while values from 100 through 127 exercise
+  // the upper bound. Every value remains representable by a signed byte.
+  auto indexes = rebind_cast<short>(GetRandomVector<xvec::simd::vec<unsigned short, TypeParam::size>>(maximumIndex));
+  indexes = set_element(indexes, 0, -2);
+
+  // Create a random mask and ensure the negative index is enabled.
   auto maskBits = getRandomBitset<TypeParam::size>();
-  auto mask = xvec::simd::mask<unsigned short, TypeParam::size>(maskBits);
+  maskBits[0] = true;
+  const auto mask = xvec::simd::mask<unsigned short, TypeParam::size>(maskBits);
 
-  auto checkedExpected = TypeParam([=](auto i) -> _Tp {
-    return (maskBits[i] && indexes[i] < rangeSize) ? table[indexes[i]] : _Tp{};
+  // Generate the expected converted values for every index width.
+  const auto checkedExpected = TypeParam([=](auto i) -> _Tp {
+    return maskBits[i] && indexes[i] >= 0 && indexes[i] < rangeSize ? table[indexes[i]] : _Tp{};
   });
-  auto uncheckedExpected = TypeParam([=](auto i) -> _Tp {
-    return (maskBits[i]) ? table[indexes[i]] : _Tp{};
-  });
-  auto expectedByteIndexed = TypeParam([=](auto i) -> _Tp{
-    return maskBits[i] && ((indexes[i] & 0xFF) < rangeSize) ? table[indexes[i] & 0xFF] : _Tp{};
+  const auto uncheckedExpected = TypeParam([=](auto i) -> _Tp {
+    return maskBits[i] ? memTable[tableOffset + indexes[i]] : _Tp{};
   });
 
-  auto indexesAs8 = rebind_cast<uint8_t>(indexes);
-  BOOST_SIMD_EQUAL(partial_gather_from<TypeParam>(table, typename decltype(indexesAs8)::mask_type(mask), indexesAs8, xvec::simd::flag_convert), expectedByteIndexed);
+  // Masked gather using four different signed index sizes.
+  const auto indexesAs8 = rebind_cast<int8_t>(indexes);
+  BOOST_SIMD_EQUAL(partial_gather_from<TypeParam>(table, typename decltype(indexesAs8)::mask_type(mask), indexesAs8, xvec::simd::flag_convert), checkedExpected);
 
-  auto indexesAs16 = rebind_cast<uint16_t>(indexes);
+  const auto indexesAs16 = rebind_cast<int16_t>(indexes);
   BOOST_SIMD_EQUAL(partial_gather_from<TypeParam>(table, typename decltype(indexesAs16)::mask_type(mask), indexesAs16, xvec::simd::flag_convert), checkedExpected);
 
-  auto indexesAs32 = rebind_cast<uint32_t>(indexes);
+  const auto indexesAs32 = rebind_cast<int32_t>(indexes);
   BOOST_SIMD_EQUAL(partial_gather_from<TypeParam>(table, typename decltype(indexesAs32)::mask_type(mask), indexesAs32, xvec::simd::flag_convert), checkedExpected);
 
-  auto indexesAs64 = rebind_cast<uint64_t>(indexes);
+  const auto indexesAs64 = rebind_cast<int64_t>(indexes);
   BOOST_SIMD_EQUAL(partial_gather_from<TypeParam>(table, typename decltype(indexesAs64)::mask_type(mask), indexesAs64, xvec::simd::flag_convert), checkedExpected);
-  
-  // One unchecked variant - it uses the same pathway through the functions, just with a different check flag.
-  BOOST_SIMD_EQUAL(unchecked_gather_from<TypeParam>(table, typename decltype(indexesAs64)::mask_type(mask), indexesAs64, xvec::simd::flag_convert), uncheckedExpected);
 
+  // The unchecked variant may read outside the logical range, but every index
+  // still addresses valid storage in the backing allocation.
+  BOOST_SIMD_EQUAL(unchecked_gather_from<TypeParam>(table, typename decltype(indexesAs64)::mask_type(mask), indexesAs64, xvec::simd::flag_convert), uncheckedExpected);
 }
 
 #if defined(_XVEC_HAS_CONSTEXPR)
@@ -199,57 +227,113 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ConstexprGatherFromContiguousRange, TypeParam, Loa
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(ScatterToRangeWithSameType, TypeParam, AllSimdTypes)
 {
+  using xvec::rebind_cast;
+
   SimdTestFixture<TypeParam> f;
 
-  // Create a contiguous table to write into. Only part of that table will be
-  // written, to check that the bounds checks work.
-  constexpr int memorySize = 1024;
+  // Create a backing allocation containing a smaller writable range. Comparing
+  // the entire allocation verifies that out-of-range writes are rejected.
+  constexpr int memorySize = 256;
   const auto originalMemory = build_memory<typename TypeParam::value_type, memorySize>();
-  constexpr int rangeSize = 200;
 
-  // Create a set of random indexes into the memory to which to write.
-  const auto indexes = GetRandomVector<xvec::simd::vec<unsigned short, TypeParam::size>>(memorySize - 1);
+  constexpr int tableOffset = 44; // Allow space before the range for negative indexes.
+  constexpr int rangeSize = 100;
+  constexpr int maximumIndex = 127;
+
+  // Most random indexes are valid, while values from 100 through 127 exercise
+  // the upper bound. Every value remains representable by a signed byte.
+  auto indexes = rebind_cast<short>(GetRandomVector<xvec::simd::vec<unsigned short, TypeParam::size>>(maximumIndex));
+  indexes = set_element(indexes, 0, -2);
 
   // Compute the expected memory after scattering into it.
   auto expectedMemory = originalMemory;
-  for (int i=0; i<TypeParam::size; ++i)
-    if (indexes[i] < rangeSize)
-      expectedMemory[indexes[i]] = f.v0[i];
+  for (int i = 0; i < TypeParam::size; ++i)
+    if (indexes[i] >= 0 && indexes[i] < rangeSize)
+      expectedMemory[tableOffset + indexes[i]] = f.v0[i];
 
-  auto computedMemory = originalMemory;
-  auto table = std::ranges::subrange(computedMemory.begin(), computedMemory.begin() + rangeSize);
-  partial_scatter_to(f.v0, table, indexes);
-  BOOST_TEST(computedMemory == expectedMemory, boost::test_tools::per_element());
+  // Scatter using 8-bit signed indexes.
+  auto memory8 = originalMemory;
+  auto table8 = std::ranges::subrange(memory8.begin() + tableOffset, memory8.begin() + tableOffset + rangeSize);
+  partial_scatter_to(f.v0, table8, rebind_cast<int8_t>(indexes));
+  BOOST_TEST(memory8 == expectedMemory, boost::test_tools::per_element());
+
+  // Scatter using 16-bit signed indexes.
+  auto memory16 = originalMemory;
+  auto table16 = std::ranges::subrange(memory16.begin() + tableOffset, memory16.begin() + tableOffset + rangeSize);
+  partial_scatter_to(f.v0, table16, rebind_cast<int16_t>(indexes));
+  BOOST_TEST(memory16 == expectedMemory, boost::test_tools::per_element());
+
+  // Scatter using 32-bit signed indexes.
+  auto memory32 = originalMemory;
+  auto table32 = std::ranges::subrange(memory32.begin() + tableOffset, memory32.begin() + tableOffset + rangeSize);
+  partial_scatter_to(f.v0, table32, rebind_cast<int32_t>(indexes));
+  BOOST_TEST(memory32 == expectedMemory, boost::test_tools::per_element());
+
+  // Scatter using 64-bit signed indexes.
+  auto memory64 = originalMemory;
+  auto table64 = std::ranges::subrange(memory64.begin() + tableOffset, memory64.begin() + tableOffset + rangeSize);
+  partial_scatter_to(f.v0, table64, rebind_cast<int64_t>(indexes));
+  BOOST_TEST(memory64 == expectedMemory, boost::test_tools::per_element());
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(MaskedScatterToContiguousRange, TypeParam, AllSimdTypes)
 {
+  using xvec::rebind_cast;
+
   SimdTestFixture<TypeParam> f;
 
-  // Create a contiguous table to write into. Only part of that table will be
-  // written, to check that the bounds checks work.
-  constexpr int memorySize = 1024;
+  // Create a backing allocation containing a smaller writable range. Comparing
+  // the entire allocation verifies that out-of-range writes are rejected.
+  constexpr int memorySize = 256;
   const auto originalMemory = build_memory<typename TypeParam::value_type, memorySize>();
-  constexpr int rangeSize = 200;
 
-  // Create a set of random indexes into the memory to which to write.
-  const auto indexes = GetRandomVector<xvec::simd::vec<unsigned short, TypeParam::size>>(memorySize - 1);
+  constexpr int tableOffset = 44; // Allow space before the range for negative indexes.
+  constexpr int rangeSize = 100;
+  constexpr int maximumIndex = 127;
 
-  // Create a random mask.
+  // Most random indexes are valid, while values from 100 through 127 exercise
+  // the upper bound. Every value remains representable by a signed byte.
+  auto indexes = rebind_cast<short>(GetRandomVector<xvec::simd::vec<unsigned short, TypeParam::size>>(maximumIndex));
+  indexes = set_element(indexes, 0, -2);
+
+  // Create a random mask and ensure the negative index is enabled.
   auto maskBits = getRandomBitset<TypeParam::size>();
-  auto mask = xvec::simd::mask<unsigned short, TypeParam::size>(maskBits);
+  maskBits[0] = true;
+  const auto mask = xvec::simd::mask<unsigned short, TypeParam::size>(maskBits);
 
-  // Compute the expected memory after scattering into unmasked locations.
+  // Compute the expected memory for every index width.
   auto expectedMemory = originalMemory;
-  for (int i=0; i<TypeParam::size; ++i)
-    if (indexes[i] < rangeSize && maskBits[i])
-      expectedMemory[indexes[i]] = f.v0[i];
+  for (std::size_t i = 0; i < TypeParam::size; ++i)
+    if (maskBits[i] && indexes[i] >= 0 && indexes[i] < rangeSize)
+      expectedMemory[tableOffset + indexes[i]] = f.v0[i];
 
-  auto computedMemory = originalMemory;
-  auto table = std::ranges::subrange(computedMemory.begin(), computedMemory.begin() + rangeSize);
+  // Scatter using 8-bit signed indexes.
+  const auto indexesAs8 = rebind_cast<int8_t>(indexes);
+  auto memory8 = originalMemory;
+  auto table8 = std::ranges::subrange(memory8.begin() + tableOffset, memory8.begin() + tableOffset + rangeSize);
+  partial_scatter_to(f.v0, table8, typename decltype(indexesAs8)::mask_type(mask), indexesAs8);
+  BOOST_TEST(memory8 == expectedMemory, boost::test_tools::per_element());
 
-  partial_scatter_to(f.v0, table, mask, indexes);
-  BOOST_TEST(computedMemory == expectedMemory, boost::test_tools::per_element());
+  // Scatter using 16-bit signed indexes.
+  const auto indexesAs16 = rebind_cast<int16_t>(indexes);
+  auto memory16 = originalMemory;
+  auto table16 = std::ranges::subrange(memory16.begin() + tableOffset, memory16.begin() + tableOffset + rangeSize);
+  partial_scatter_to(f.v0, table16, typename decltype(indexesAs16)::mask_type(mask), indexesAs16);
+  BOOST_TEST(memory16 == expectedMemory, boost::test_tools::per_element());
+
+  // Scatter using 32-bit signed indexes.
+  const auto indexesAs32 = rebind_cast<int32_t>(indexes);
+  auto memory32 = originalMemory;
+  auto table32 = std::ranges::subrange(memory32.begin() + tableOffset, memory32.begin() + tableOffset + rangeSize);
+  partial_scatter_to(f.v0, table32, typename decltype(indexesAs32)::mask_type(mask), indexesAs32);
+  BOOST_TEST(memory32 == expectedMemory, boost::test_tools::per_element());
+
+  // Scatter using 64-bit signed indexes.
+  const auto indexesAs64 = rebind_cast<int64_t>(indexes);
+  auto memory64 = originalMemory;
+  auto table64 = std::ranges::subrange(memory64.begin() + tableOffset, memory64.begin() + tableOffset + rangeSize);
+  partial_scatter_to(f.v0, table64, typename decltype(indexesAs64)::mask_type(mask), indexesAs64);
+  BOOST_TEST(memory64 == expectedMemory, boost::test_tools::per_element());
 }
 
 #if defined(_XVEC_HAS_CONSTEXPR)
