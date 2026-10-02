@@ -10,11 +10,13 @@
 #include <xvec/simd>
 
 // make iterators printable for the test results.
+namespace xvec::simd {
 template<typename _Simd>
 std::ostream& operator<<(std::ostream& stream, const xvec::simd::simd_iterator<_Simd>& iter) {
   stream << "simd_iterator<" << (void*)iter.data << ", " << iter.index << ">";
   return stream;
 }
+} // Namespace xvec::simd
 
 #include "SimdTestUtilities.hpp"
 #include "TypesToTest.hpp"
