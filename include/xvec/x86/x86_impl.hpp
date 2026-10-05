@@ -690,35 +690,34 @@ constexpr auto gather_from(x86_avx2_tag, const _Range& r,
 {
   using _Tp = std::ranges::range_value_t<_Range>;
   auto data_ptr = std::to_address(r.begin());
-  const auto rmax = _Idx(std::min(r.size(), size_t(std::numeric_limits<_Idx>::max())));
 
   target_overloads impl {
 
 #if defined(__AVX512F__)
     // 32-bit Intel AVX-512
-    [=](xmm_register<uint32_t> auto i, auto m) { return _mm_mmask_i32gather_epi32(__m128i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
-    [=](ymm_register<uint32_t> auto i, auto m) { return _mm256_mmask_i32gather_epi32(__m256i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
+    [=](xmm_register<int32_t> auto i, auto m) { return _mm_mmask_i32gather_epi32(__m128i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
+    [=](ymm_register<int32_t> auto i, auto m) { return _mm256_mmask_i32gather_epi32(__m256i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
     
-    [=](xmm_register<uint64_t> auto i, auto m) { return _mm_mmask_i64gather_epi64(__m128i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
-    [=](ymm_register<uint64_t> auto i, auto m) { return _mm256_mmask_i64gather_epi64(__m256i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
+    [=](xmm_register<int64_t> auto i, auto m) { return _mm_mmask_i64gather_epi64(__m128i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
+    [=](ymm_register<int64_t> auto i, auto m) { return _mm256_mmask_i64gather_epi64(__m256i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
 
-    [=](zmm_register<uint32_t> auto i, auto m) { return _mm512_mask_i32gather_epi32(__m512i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
-    [=](zmm_register<uint64_t> auto i, auto m) { return _mm512_mask_i64gather_epi64(__m512(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
+    [=](zmm_register<int32_t> auto i, auto m) { return _mm512_mask_i32gather_epi32(__m512i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
+    [=](zmm_register<int64_t> auto i, auto m) { return _mm512_mask_i64gather_epi64(__m512(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
 
 #elif defined(__AVX2__)
     // Note the explicit growth of the mask to the correct register size to
     // avoid inadvertently leaving uninitialised elements active.
 
     // 32-bit Intel AVX2
-    [=](xmm_register<uint32_t> auto i, auto m)
+    [=](xmm_register<int32_t> auto i, auto m)
       { return _mm_mask_i32gather_epi32(__m128i(), data_ptr, i.to_register(), grow<4>(m).to_register(), sizeof(_Tp)); },
-    [=](ymm_register<uint32_t> auto i, auto m)
+    [=](ymm_register<int32_t> auto i, auto m)
       { return _mm256_mask_i32gather_epi32(__m256i(), data_ptr, i.to_register(), grow<8>(m).to_register(), sizeof(_Tp)); },
 
     // 64-bit Intel AVX2
-    [=](xmm_register<uint64_t> auto i, auto m)
+    [=](xmm_register<int64_t> auto i, auto m)
       { return _mm_mask_i64gather_epi64(__m128i(), data_ptr, i.to_register(), grow<2>(m).to_register(), sizeof(_Tp)); },
-    [=](ymm_register<uint64_t> auto i, auto m)
+    [=](ymm_register<int64_t> auto i, auto m)
       { return _mm256_mask_i64gather_epi64(__m256i(), data_ptr, i.to_register(), grow<4>(m).to_register(), sizeof(_Tp)); },
 
 #endif
@@ -726,14 +725,14 @@ constexpr auto gather_from(x86_avx2_tag, const _Range& r,
     [=](auto unhandled, auto) { static_assert(dependent_false<decltype(unhandled)>); }
   };
 
-  // Convert the indexes to at least 32-bit, since no instruction exists
-  // operating at a smaller granularity.
-  constexpr auto idxNumBytes = std::max({sizeof(uint32_t), sizeof(_Tp), sizeof(_Idx)});
-  using _IW = container_for_num_bytes<idxNumBytes>;
+  // The indexes and the values to gether must be the same size, and at least
+  // 32-bit signed to match the hardware expectation.
+  constexpr auto idxNumBytes = std::max({sizeof(int32_t), sizeof(_Tp), sizeof(_Idx)});
+  using _IW = std::make_signed_t<container_for_num_bytes<idxNumBytes>>;
+  const auto rmax = std::min<_IW>(r.size(), std::numeric_limits<_Idx>::max());
 
   auto wrapper = [=]<typename _VecIdx>(_VecIdx idx, auto m) {
-    // Bump the indexes and mask up to the preferred size if necessary.
-    using RetypedIndex = vec<_IW, _VecIdx::size>;
+    using RetypedIndex = rebind_t<_IW, _VecIdx>;
     auto ri = RetypedIndex(idx);
 
     // Note that the mask is actively resized to zero out unwanted positions.
@@ -744,7 +743,7 @@ constexpr auto gather_from(x86_avx2_tag, const _Range& r,
 
     // Add a bounds check if necessary.
     if constexpr (!contains_flag<flag_unchecked>(flags))
-      rm = rm && (ri < rmax);
+      rm = rm && (ri >= _IW(0) && ri < rmax);
 
     // Do the gather, reading back elements which are at least as big as the required type, and then downcasting to the types size if necessary.
     auto t = RetypedIndex(impl(ri, rm));
@@ -774,7 +773,7 @@ constexpr auto gather_from(x86_avx2_tag, const _Range& r,
 
 inline auto scatterImpl =
   []<typename _Tp, typename _VT, typename _IT>(basic_vec<_Tp, _VT> v,
-                                               basic_vec<uint32_t, _IT> idx, auto ptr, uint64_t m)
+                                               basic_vec<int32_t, _IT> idx, auto ptr, uint64_t m)
 {
   constexpr uint64_t justMaskBits = (1ULL << basic_vec<_Tp, _VT>::size()) - 1;
   const uint64_t nm = justMaskBits & m;
@@ -807,7 +806,7 @@ scatter_to(x86_avx512_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
            const basic_vec<_Idx, _IdxAbi>& indexes, flags<_Flags...> flags)
 {
   auto ptr = std::to_address(r.begin());
-  const auto rmax = _Idx(std::min(r.size(), size_t(std::numeric_limits<_Idx>::max())));
+  const auto rmax = int32_t(std::min(r.size(), size_t(std::numeric_limits<_Idx>::max())));
 
   // Bind extra pointer and default mask parameters to the scatter lambda. Note
   // that a range check is added if necessary too.
@@ -815,7 +814,7 @@ scatter_to(x86_avx512_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
     if constexpr (contains_flag<detail::flag_unchecked>(flags))
       scatterImpl(v, i, ptr, ~0ULL);
     else
-      scatterImpl(v, i, ptr, (i < rmax).to_register());
+      scatterImpl(v, i, ptr, (i >= 0 && i < rmax).to_register());
   };
 
   if constexpr (contains_flag<flag_unchecked>(flags))
@@ -823,7 +822,7 @@ scatter_to(x86_avx512_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
 
   // All scatter instructions can be made to use 32-bit indexes.
   // :TODO: A special case might be 64-bit values using 64-bit indexes
-  auto indexAs32 = vec<uint32_t, basic_vec<_Idx, _IdxAbi>::size>(indexes);
+  auto indexAs32 = vec<int32_t, basic_vec<_Idx, _IdxAbi>::size>(indexes);
   chunked_invoke<(int)basic_vec<_Tp>::size>(impl, vec_as_container(values), indexAs32);
 }
 
@@ -840,7 +839,7 @@ scatter_to(x86_avx512_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
   // Range check if required.
   const auto rmax = _Idx(std::min(r.size(), size_t(std::numeric_limits<_Idx>::max())));
   auto rangeCheckedMask =
-    contains_flag<detail::flag_unchecked>(flags) ? mask : (indexes < rmax) && mask;
+    contains_flag<detail::flag_unchecked>(flags) ? mask : (indexes >= _Idx(0) && indexes < rmax) && mask;
 
   if constexpr (contains_flag<flag_unchecked>(flags))
     checkStaticMemoryBounds("scatter", indexes, rmax, mask);
@@ -850,7 +849,7 @@ scatter_to(x86_avx512_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
 
   // All scatter instructions can be made to use 32-bit indexes.
   // :TODO: A special case might be 64-bit values using 64-bit indexes
-  auto indexAs32 = vec<uint32_t, basic_vec<_Idx, _IdxAbi>::size>(indexes);
+  auto indexAs32 = vec<int32_t, basic_vec<_Idx, _IdxAbi>::size>(indexes);
   chunked_invoke<(int)basic_vec<_Tp>::size()>(impl, vec_as_container(values), indexAs32, rangeCheckedMask);
 }
 #endif

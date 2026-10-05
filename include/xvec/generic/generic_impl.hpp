@@ -686,66 +686,65 @@ compress_mask_by_mask(compact_mask_tag, const _M& v, const _M& selector, bool fi
 /// Gather the contents of memory from the supplied index positions.
 // :TODO: :COMPILER: Expose the gather llvm primitive and use it directly?
 /// @tparam _Range The type of the range
-/// @tparam _Idx The index type
-/// @tparam _IdxAbi The ABI of the index simd::vec
+/// @tparam _Idx The simd index type
 /// @tparam _Flags The type of the flags
 /// @param r The range from which to gather
 /// @param indexes The simd of indexes
 /// @param flags The flags controlling the gather
 /// @return The gathered simd value
-template<detail::contiguous_sized_range _Range, std::integral _Idx, typename _IdxAbi, typename... _Flags>
-constexpr auto gather_from(generic_tag, const _Range& r, const basic_vec<_Idx, _IdxAbi>& indexes, flags<_Flags...> flags)
+template<detail::contiguous_sized_range _Range, vec_integral _Idx, typename... _Flags>
+constexpr auto gather_from(generic_tag, const _Range& r, const _Idx& indexes, flags<_Flags...> flags)
 {
   using _Tp = std::ranges::range_value_t<_Range>;
-  const auto rmax = _Idx(std::min(r.size(), size_t(std::numeric_limits<_Idx>::max())));
+  const auto rmax = r.size();
 
   if constexpr (contains_flag<flag_unchecked>(flags))
     checkStaticMemoryBounds("gather", indexes, rmax);
 
-  constexpr int numIndexes = basic_vec<_Idx, _IdxAbi>::size();
+  constexpr int numIndexes = _Idx::size();
 
   // Put the indexes and the result into memory, as this generates better code
   // than trying to pull out individual elements of a simd register to pass to a
   // separate load instruction, and to put the results back into a register.
-  const auto indexPtr = reinterpret_cast<const _Idx*>(&indexes);
+  const auto indexPtr = reinterpret_cast<const typename _Idx::value_type*>(&indexes);
   _Tp result[numIndexes];
 
   for (int i=0; i<numIndexes; ++i)
   {
     auto idx = indexPtr[i];
-    result[i] = contains_flag<flag_unchecked>(flags) || (idx < rmax) ? r[idx] : _Tp();
+    bool validIndex = (idx >= 0 && std::cmp_less(+idx, rmax));
+    result[i] = contains_flag<flag_unchecked>(flags) || validIndex ? r[idx] : _Tp();
   }
 
-  return vec<_Tp, numIndexes>(result);
+  return rebind_t<_Tp, _Idx>(result);
 }
 
 /// Gather the contents of memory from the supplied index positions, using a mask.
 /// @tparam _Range The type of the range
-/// @tparam _Idx The index type
-/// @tparam _IdxAbi The ABI of the index simd::vec
+/// @tparam _Idx The simd index type
 /// @tparam _Flags The type of the flags
 /// @param r The range from which to gather
 /// @param mask The mask to use for gathering
 /// @param indexes The simd of indexes
 /// @param flags The flags controlling the gather
 /// @return The gathered simd value
-template<detail::contiguous_sized_range _Range, std::integral _Idx, typename _IdxAbi, typename... _Flags>
+template<detail::contiguous_sized_range _Range, vec_integral _Idx, typename... _Flags>
 constexpr auto gather_from(generic_tag, const _Range& r,
-                           const typename basic_vec<_Idx, _IdxAbi>::mask_type& mask,
-                           const basic_vec<_Idx, _IdxAbi>& indexes, flags<_Flags...> flags)
+                           const typename _Idx::mask_type& mask,
+                           const _Idx& indexes, flags<_Flags...> flags)
 {
   using _Tp = std::ranges::range_value_t<_Range>;
-  const auto rmax = _Idx(std::min(r.size(), size_t(std::numeric_limits<_Idx>::max())));
+  const auto rmax = r.size();
 
   if constexpr (contains_flag<flag_unchecked>(flags))
     checkStaticMemoryBounds("gather", indexes, rmax, mask);
 
-  constexpr int numIndexes = basic_vec<_Idx, _IdxAbi>::size();
+  constexpr int numIndexes = _Idx::size();
 
   // Put the indexes and the result into memory, as this generates better code
   // than trying to pull out individual elements of a simd register to pass to a
   // separate load instruction, and to put the results back into a register.
-  const auto indexPtr = reinterpret_cast<const _Idx*>(&indexes);
+  const auto indexPtr = reinterpret_cast<const typename _Idx::value_type*>(&indexes);
   _Tp result[numIndexes];
 
   // Need simple mask which can be queried by index.
@@ -754,83 +753,79 @@ constexpr auto gather_from(generic_tag, const _Range& r,
   for (int i=0; i<numIndexes; ++i)
   {
     auto idx = indexPtr[i];
-    bool validIndex = contains_flag<flag_unchecked>(flags) || (idx < rmax);
+    bool validIndex = contains_flag<flag_unchecked>(flags) || (idx >= 0 && std::cmp_less(+idx, rmax));
     result[i] = validIndex && mb[i] ? r[idx] : _Tp();
   }
 
-  return vec<_Tp, numIndexes>(result);
+  return rebind_t<_Tp, _Idx>(result);
 }
 
 /// Scatter the contents of a simd to the supplied index positions.
 /// @tparam _Range The type of the range
-/// @tparam _Tp The element type
-/// @tparam _TpAbi The ABI of the vec
-/// @tparam _Idx The index type
-/// @tparam _IdxAbi The ABI of the index simd::vec
+/// @tparam _Vp The values to scatter to the range.
+/// @tparam _Idx The indexes type
 /// @tparam _Flags The type of the flags
 /// @param values The simd of values to scatter
 /// @param r The range to which to scatter
 /// @param indexes The simd of indexes
 /// @param flags The flags controlling the scatter
-template<typename _Range, typename _Tp, typename _TpAbi, typename _Idx, typename _IdxAbi, typename... _Flags>
+template<typename _Range, vec_type _Vp, vec_integral _Idx, typename... _Flags>
 constexpr void
-scatter_to(generic_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
-           const basic_vec<_Idx, _IdxAbi>& indexes, flags<_Flags...> flags)
+scatter_to(generic_tag, const _Vp& values, _Range&& r, const _Idx& indexes, flags<_Flags...> flags)
 {
-  static_assert(basic_vec<_Tp, _TpAbi>::size() == basic_vec<_Idx, _IdxAbi>::size(),
-                "Caller should ensure sizes match");
-  using _Out = std::ranges::range_value_t<_Range>;
-
-  const auto rmax = _Idx(std::min(r.size(), size_t(std::numeric_limits<_Idx>::max())));
-  const auto mb = (indexes < rmax).to_bitset();
+  const auto rmax = r.size();
   auto data_ptr = std::to_address(r.begin());
 
   if constexpr (contains_flag<flag_unchecked>(flags))
     checkStaticMemoryBounds("scatter", indexes, rmax);
 
-  [=]<std::size_t... _Iota>(std::index_sequence<_Iota...>) {
+  auto doWrite = [&](auto i) {
+    const auto idx = indexes[i];
+    const bool isValidIndex = idx >= 0 && std::cmp_less(+idx, rmax);
+    if (contains_flag<flag_unchecked>(flags) || isValidIndex)
+      data_ptr[idx] = values[i];
+  };
 
-    if constexpr (detail::contains_flag<detail::flag_unchecked>(flags))
-      ((data_ptr[indexes[_Iota]] = values[_Iota]), ...);
-    else
-      ((mb[_Iota] ? (data_ptr[indexes[_Iota]] = values[_Iota]) : _Out()), ...);
-
-  }(std::make_index_sequence<basic_vec<_Idx, _IdxAbi>::size>());
-
+  [&]<std::size_t... _Iota>(std::index_sequence<_Iota...>) {
+    (doWrite(_Iota), ...);
+  }(std::make_index_sequence<_Idx::size>());
 }
 
 /// Scatter the contents of a simd to the supplied index positions, using a mask.
 /// @tparam _Range The type of the range
-/// @tparam _Tp The element type
-/// @tparam _TpAbi The ABI of the vec
-/// @tparam _Idx The index type
-/// @tparam _IdxAbi The ABI of the index simd::vec
+/// @tparam _Vp The values to scatter to the range
+/// @tparam _Idx The indexes type
 /// @tparam _Flags The type of the flags
 /// @param values The simd of values to scatter
 /// @param r The range to which to scatter
 /// @param mask The mask to use for scattering
 /// @param indexes The simd of indexes
 /// @param flags The flags controlling the scatter
-template<typename _Range, typename _Tp, typename _TpAbi, typename _Idx, typename _IdxAbi, typename... _Flags>
+template<typename _Range, vec_type _Vp, vec_integral _Idx, typename... _Flags>
 constexpr void
-scatter_to(generic_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
-           const typename basic_vec<_Idx, _IdxAbi>::mask_type& mask,
-           const basic_vec<_Idx, _IdxAbi>& indexes, flags<_Flags...> flags)
+scatter_to(generic_tag, const _Vp& values, _Range&& r,
+           const typename _Idx::mask_type& mask,
+           const _Idx& indexes, flags<_Flags...> flags)
 {
-  using _Out = std::ranges::range_value_t<_Range>;
-  const auto rmax = _Idx(std::min(r.size(), size_t(std::numeric_limits<_Idx>::max())));
-  auto rangeCheckedMask =
-    contains_flag<detail::flag_unchecked>(flags) ? mask : (indexes < rmax) && mask;
+  const auto rmax = r.size();
   auto data_ptr = std::to_address(r.begin());
 
   if constexpr (contains_flag<flag_unchecked>(flags))
     checkStaticMemoryBounds("scatter", indexes, rmax, mask);
 
-  const auto mb = rangeCheckedMask.to_bitset();
+  auto doWrite = [&](auto i) {
+    if (!mask[i])
+      return;
+
+    const auto idx = indexes[i];
+    const bool isValidIndex = idx >= 0 && std::cmp_less(+idx, rmax);
+    if (contains_flag<flag_unchecked>(flags) || isValidIndex)
+      data_ptr[idx] = values[i];
+  };
 
   [=]<std::size_t... _Iota>(std::index_sequence<_Iota...>) {
-    ((mb[_Iota] ? (data_ptr[indexes[_Iota]] = values[_Iota]) : _Out()), ...);
-  }(std::make_index_sequence<basic_vec<_Idx, _IdxAbi>::size>());
+    (doWrite(_Iota), ...);
+  }(std::make_index_sequence<_Idx::size>());
 }
 
 /// :TODO: FMA - Don't provide generic - should always match a real instruction to get the right precision?
