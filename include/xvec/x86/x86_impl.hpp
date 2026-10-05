@@ -183,7 +183,6 @@ mask_to_bitset(x86_avx512_tag, const _Mp& mask) noexcept
 
   // Build the bitset up 64-bits at a time. Each 64-bit group is extracted from the extended int and
   // then inserted into the bitset.
-#pragma unroll
   for (simd_size_type i = 0; i<((_Np + 63) / 64); ++i)
   {
     const auto b = std::bitset<_Np>(std::uint64_t(mask.to_builtin() >> (64 * i)));
