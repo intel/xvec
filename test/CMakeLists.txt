@@ -234,8 +234,7 @@ target_compile_options(
   INTERFACE
     -Wall
     -Wextra
-    -Wno-tautological-constant-compare
-    -Wno-deprecated-declarations
+    -Werror
     -Wno-psabi
     -Wno-sign-compare
     "${XVEC_TEST_OLEVEL}"
@@ -246,25 +245,11 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "^(IntelLLVM|Clang)$")
   target_compile_options(
     xvec_test_common
     INTERFACE
-      -Wno-unknown-warning-option
-      -Wno-deprecated-copy
-      -Wno-deprecated-builtins
-      -Wno-unused-command-line-argument
   )
-
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(
-      xvec_test_common
-      INTERFACE
-        -Wno-deprecated-type
-    )
-  endif()
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(
     xvec_test_common
     INTERFACE
-      -Wno-unknown-warning
-      -Wno-maybe-uninitialized
       -Wno-unknown-pragmas
       -flax-vector-conversions
   )

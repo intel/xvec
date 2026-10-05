@@ -496,10 +496,22 @@ struct mask_traits
   static constexpr int internalNp = std::bit_ceil(std::max<unsigned>(8, _Np));
 
 #if defined (__llvm__)
-  #if (__INTEL_LLVM_COMPILER > 20220000)
-    using compact_builtin_type = unsigned _BitInt(internalNp);
+
+  // Two different names for ExtInt/BitInt - choose one explicitly to avoid warnings about deprecations.
+  #if defined(__INTEL_LLVM_COMPILER)
+    #if __INTEL_LLVM_COMPILER > 20220000
+      using compact_builtin_type = unsigned _BitInt(internalNp);
+    #else
+      using compact_builtin_type = unsigned _ExtInt(internalNp);
+    #endif
+  #elif defined(__clang_major__)
+    #if __clang_major__ >= 14
+      using compact_builtin_type = unsigned _BitInt(internalNp);
+    #else
+      using compact_builtin_type = unsigned _ExtInt(internalNp);
+    #endif
   #else
-    using compact_builtin_type = unsigned _ExtInt(internalNp);
+    #error "Unknown LLVM-based compiler: choose a bit-precise integer type"
   #endif
 
   static constexpr auto all_bits_set = (_Np == internalNp) ? ~compact_builtin_type() : ((compact_builtin_type(1) << _Np) - 1);
