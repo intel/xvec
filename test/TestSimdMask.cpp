@@ -358,6 +358,18 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(InitialiseFromGenerator, TypeParam, AllSimdMaskTyp
 #endif
 }
 
+BOOST_AUTO_TEST_CASE(GeneratorIndexType)
+{
+  using Mask = xvec::simd::mask<int, 4>;
+  using xvec::simd::simd_size_type;
+
+  // Only accepts integral_constant<simd_size_type, I>, not a plain index.
+  const Mask computed([]<simd_size_type I>(std::integral_constant<simd_size_type, I>) -> bool 
+    { return I == 0 || I == 3; });
+
+  BOOST_TEST(computed.to_bitset() == std::bitset<4>(0b1001));
+}
+
 BOOST_AUTO_TEST_CASE_TEMPLATE(InitialiseNbitMask, TypeParam, AllSimdMaskTypes)
 {
   using xvec::simd::mask_from_count;

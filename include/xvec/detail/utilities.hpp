@@ -249,7 +249,7 @@ constexpr void checkStaticMemoryBounds([[maybe_unused]] const std::string& op_na
 {
 #if defined(XVEC_ALWAYS_RANGE_CHECK_MEMORY)
   auto biggestIndex = reduce_max(indexes, m);
-  if (biggestIndex >= range_size)
+  if (std::size_t(biggestIndex) >= range_size)
   {
     std::string msg =
       "xvec range error for " + op_name + ". Range size:" + std::to_string(range_size) +

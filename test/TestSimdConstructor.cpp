@@ -275,6 +275,30 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(Generator, TypeParam, AllSimdTypes)
   BOOST_TEST(to_array(computedConstexpr) == expected, boost::test_tools::per_element());
 }
 
+BOOST_AUTO_TEST_CASE(GeneratorIndexType)
+{
+  using Vec = xvec::simd::vec<int, 4>;
+  using ComplexVec = xvec::simd::vec<std::complex<float>, 4>;
+  using xvec::simd::simd_size_type;
+
+  // Check that the generator passes a compile-time constant of the correct type.
+  const Vec computed([]<simd_size_type I>(std::integral_constant<simd_size_type, I>) -> int {
+    return I + 2;
+  });
+  const std::array<int, 4> expected{2, 3, 4, 5};
+  BOOST_TEST(to_array(computed) == expected, boost::test_tools::per_element());
+
+  // Same again, but for complex (which currently uses a different code path).
+  const ComplexVec complexComputed([]<simd_size_type I>(
+    std::integral_constant<simd_size_type, I>) -> std::complex<float> {
+    return {float(I + 2), float(I + 12)};
+  });
+  const std::array<std::complex<float>, 4> complexExpected{{
+    {2.0f, 12.0f}, {3.0f, 13.0f}, {4.0f, 14.0f}, {5.0f, 15.0f}
+  }};
+  BOOST_TEST(to_array(complexComputed) == complexExpected, boost::test_tools::per_element());
+}
+
 void CheckDisallowedGenerators()
 {
   struct S {

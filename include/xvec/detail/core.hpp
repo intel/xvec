@@ -314,7 +314,8 @@ concept generated_value_convertible_to =
 template<typename _Gen, typename _Tp, simd_size_type _Idx>
 concept generator_invocable_at =
   requires(_Gen __gen) {
-    { __gen(_Idx) } -> generated_value_convertible_to<_Tp>;
+    { __gen(std::integral_constant<simd_size_type, _Idx>{}) }
+      -> generated_value_convertible_to<_Tp>;
   };
 
 template<typename _Gen, typename _Tp, int _Size>

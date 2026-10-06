@@ -347,7 +347,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BitReverse, TypeParam, UnsignedSimdTypes)
 #if defined(_XVEC_HAS_CONSTEXPR)
   {
     constexpr auto cv = GetConstexprRandomVector<TypeParam, 1011>();
-    static_assert(to_array(bit_reverse(cv)) == applyUnaryToArray(cv, expected_bit_reverse));
+    constexpr auto reversed = bit_reverse(cv);
+    constexpr auto expected = applyUnaryToArray(cv, expected_bit_reverse);
+    static_assert(to_array(reversed) == expected);
   }
 #endif
 }
