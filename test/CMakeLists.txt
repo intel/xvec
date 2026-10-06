@@ -236,7 +236,6 @@ target_compile_options(
     -Wextra
     -Werror
     -Wno-psabi
-    -Wno-sign-compare
     "${XVEC_TEST_OLEVEL}"
     -fno-fast-math
 )

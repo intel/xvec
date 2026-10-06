@@ -55,15 +55,18 @@ constexpr auto generate(_Gp generator) {
   if constexpr (complex_number<typename _Vp::value_type>)
   {
     using _Tp = typename _Vp::traits::element_type;
-    return _Vp([=]<std::size_t... _Idx>(std::index_sequence<_Idx...>)  {
-      return typename _Vp::traits::builtin_type{_Tp((_Idx % 2) ? generator(_Idx / 2).imag() : generator(_Idx / 2).real())...};
-    }(std::make_index_sequence<_Vp::size() * 2>()));
+    return _Vp([=]<simd_size_type... _Idx>(std::integer_sequence<simd_size_type, _Idx...>)  {
+      return typename _Vp::traits::builtin_type{_Tp((_Idx % 2) ? 
+                                                generator(size_constant<_Idx / 2>()).imag() :
+                                                generator(size_constant<_Idx / 2>()).real())...};
+    }(std::make_integer_sequence<simd_size_type, _Vp::size() * 2>()));
   }
   else
   {
-    return _Vp([=]<std::size_t... _Idx>(std::index_sequence<_Idx...>) {
-      return typename _Vp::traits::builtin_type{std::bit_cast<typename _Vp::traits::element_type>(generator(_Idx))...};
-    }(std::make_index_sequence<_Vp::size()>()));
+    return _Vp([=]<simd_size_type... _Idx>(std::integer_sequence<simd_size_type, _Idx...>) {
+      return typename _Vp::traits::builtin_type{std::bit_cast<typename _Vp::traits::element_type>(
+        generator(size_constant<_Idx>{}))...};
+    }(std::make_integer_sequence<simd_size_type, _Vp::size()>()));
   }
 }
 
@@ -151,18 +154,18 @@ constexpr _Mp generate_mask(generic_tag, _Gp generator) {
   using _Tp = container_for_num_bytes<simd_mask_element_size_v<_Mp>>;
   using _Vp = typename _Mp::builtin_type;
 
-  auto r = [=]<std::size_t... _Idx>(std::index_sequence<_Idx...>) {
+  auto r = [=]<simd_size_type... _Idx>(std::integer_sequence<simd_size_type, _Idx...>) {
     return _Vp{_Tp(generator(size_constant<_Idx>()) ? ~_Tp() : _Tp())...};
-  }(std::make_index_sequence<_Mp::size()>());
+  }(std::make_integer_sequence<simd_size_type, _Mp::size()>());
 
   return _Mp::from_builtin(r);
 }
 
 template<mask_type _Mp, typename _Gp>
 constexpr _Mp generate_mask(compact_mask_tag, _Gp generator) {
-  return _Mp::from_builtin([=]<std::size_t... _Idx>(std::index_sequence<_Idx...>) {
+  return _Mp::from_builtin([=]<simd_size_type... _Idx>(std::integer_sequence<simd_size_type, _Idx...>) {
     return ((typename _Mp::builtin_type(generator(size_constant<_Idx>{})) << _Idx) | ...);
-  } (std::make_index_sequence<_Mp::size>()));
+  } (std::make_integer_sequence<simd_size_type, _Mp::size()>()));
 }
 ///@}
 

@@ -132,7 +132,7 @@ public:
   /// construct pre-computed mask values.
   /// @ingroup simd_mask_constructor
   /// @param fn The generator function to compute each bit.
-  constexpr basic_mask(std::invocable<simd_size_type> auto fn) : basic_mask(detail::generate_mask<basic_mask>(target, fn)) {}
+  constexpr basic_mask(std::invocable<std::integral_constant<simd_size_type, 0>> auto fn) : basic_mask(detail::generate_mask<basic_mask>(target, fn)) {}
 
   /// Generate a mask which represents the bottom N bits of the mask.
   /// @internal

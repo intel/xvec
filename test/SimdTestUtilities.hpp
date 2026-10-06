@@ -131,7 +131,7 @@ GetConstexprRandomVector (int limit = 32)
       limit = limit * 2;
 
     // Hashy-like algorithm to pick a number. Relies on the position and the incoming `seed` index.
-    auto genRnd = [=](auto i) -> typename _V::value_type
+    auto genRnd = [=](xvec::simd::simd_size_type i) -> typename _V::value_type
     {
       auto v = (r[(i + 7) & 0xF] ^ std::rotl(r[(i + index) & 0xF], i)) % int(limit);
       if (hasNegative && ((v & 1) == 1))
