@@ -153,15 +153,16 @@ public:
   constexpr basic_vec(const builtin_type& v) noexcept : data(v) {}
 
   /// Allow a vec to be constructed from a target register, such as the return
-  /// value of an intrinsic. If the vec object is smaller than the register
-  /// type then some values may be discarded, so the constructor is explicit to
-  /// make the user be clear about this. Note that in the special case that the
-  /// vec is already the exact size of the target register, this constructor
-  /// will be disabled because the register type will match the compiler's own
-  /// builtin type.
+  /// value of an intrinsic. If the vec object is smaller than the register type
+  /// then some values may be discarded, so the constructor is explicit to make
+  /// the user be clear about this. Note that there is also a constructor which
+  /// accepts a builtin type, so in the case where a register is directly
+  /// convertible to a builtin, this would introduce ambiguity and so is
+  /// disabled.
   /// @ingroup simd_constructor
   explicit constexpr basic_vec(register_type r) noexcept
-    requires (!std::same_as<register_type, builtin_type>) : data(traits::from_register(r)) {}
+    requires (!std::is_convertible_v<register_type, const builtin_type&>)
+    : data(traits::from_register(r)) {}
 
   /// @brief Constructs a basic_vec by reading the contents of an object with the same
   /// number of values (e.g., span, C-array, std::array). Both unmasked and masked variants are provided.
@@ -266,9 +267,9 @@ public:
   /// This will return the smallest target register that can contain all the elements of the vec.
   explicit constexpr operator typename traits::register_type() const { return traits::to_register(data); }
 
-  /// @brief Convert the vec into the nearest register size which is large enough to store all the vec elements.
-  /// This is more convenient to use than the explicit register_type cast since there is no need to work out the register
-  /// type.
+  /// Convert the mask into a register which can be passed to an intrinsic
+  /// (e.g., on x86 `vec<double, 3>` would become `__m256d`). Vectors which
+  /// don't fit into a native register must be broken into smaller pieces first.
   constexpr typename traits::register_type to_register() const { return traits::to_register(data); }
 
   /// @brief Return the builtin value.

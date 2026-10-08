@@ -437,30 +437,33 @@ struct vec_traits
   /// The compiler's representation of the simd::vec type.
   using builtin_type __attribute__((__vector_size__(sizeof(element_type) * _numStorageElements))) = element_type;
 
-  /// @brief The best register size to use for operations on this builtin type.
-  using register_type __attribute__((__vector_size__(sizeof(element_type) * register_size<element_type, _numDataElements>))) = element_type;
+  /// @brief The register to use for intrinsic operations on this vec (e.g., for
+  /// vec<double, 3> it would be __m256d). Note that unininitialised elements
+  /// may be inserted to grow the vector to a size which can be represented in a
+  /// register.
+  using register_type = decltype(detail::get_register_type<builtin_type>());
 
-  /// @brief Allow the builtin data to be turned into the closest matching
-  /// target register type. This will return the smallest target register that
-  /// can contain all the elements of the builtin type. It is an error to try to
-  /// store the data in a register which is too small. In that case the user
-  /// must break the builtin type into pieces which do fit in a register (e.g.,
-  /// using fit_to_size, or extract). If the builtin type contains less data
-  /// than the register then the unused register elements will have undefined
-  /// values.
+  /// Convert the vector data into a native register value which can be passed
+  /// directly into an intrinsic. Firstly the data is expanded to full a
+  /// complete native register (e.g., 128-bit, 256-bit, etc) using uninitialised
+  /// bits. Secondly, the register is converted into the most appropriate native
+  /// register type which can be used directly by an intrinsic. For example,
+  /// vec<int, 3> would become __m128i, vec<float, 5> would become __m256, and
+  /// so on. This function must not be used on a vec which is too big to fit a
+  /// native register (use simd::chunk to break it into register-sized pieces).
+  /// Note that while many intrinsics accept a register which contains
+  /// uninitialised data, this data might lead to incorrect operation. The
+  /// caller is responsible for ensuring that the uninitialised bits are set to
+  /// a safe value before calling an intrinsic which requires it.
   static constexpr register_type to_register(builtin_type v) {
-    // Use a static assert rather than a requires to allow this error to be
-    // reported instead of rather than resulting in a confusing lookup failure.
-    constexpr auto _regSize =  register_size<_Tp, _Np>;
+    constexpr auto _regSize = register_size<_Tp, _Np>;
     static_assert(_Np <= _regSize, "Converting to a smaller register loses data");
-    if constexpr (_Np == _regSize)
-      return v;
-    else
-    {
-      return [=]<std::size_t... _Idx>(std::index_sequence<_Idx...>) {
+    
+    auto r = [=]<std::size_t... _Idx>(std::index_sequence<_Idx...>) {
         return __builtin_shufflevector(v, v, (_Idx < _Np ? int(_Idx) : -1)...);
       }(std::make_index_sequence<_regSize>());
-    }
+
+    return register_type(r);
   }
 
   /// @brief A named constructor for creating a builtin type from a register value.
@@ -470,12 +473,17 @@ struct vec_traits
     constexpr auto _regSize = register_size<_Tp, _Np>;
     static_assert(_Np <= _regSize, "Converting from a smaller register creates undefined values");
     if constexpr (_Np == _regSize)
-      return r;
+      return builtin_type(r);
     else
     {
-      return [=]<std::size_t... _Idx>(std::index_sequence<_Idx...>) {
-        return __builtin_shufflevector(r, r, ((_Idx < _numDataElements) ? int(_Idx) : -1)...);
-      }(std::make_index_sequence<_numStorageElements>());
+      // Convert to a full register of the builtin elements.
+      using FullRegBuiltin = typename vec<element_container_type, _regSize>::builtin_type;
+      auto b = FullRegBuiltin(r); 
+      
+      // Then shuffle down to the correct number of elements.
+      return builtin_type([=]<std::size_t... _Idx>(std::index_sequence<_Idx...>) {
+        return __builtin_shufflevector(b, b, _Idx...);
+      }(std::make_index_sequence<_numStorageElements>()));
     }
   }
 

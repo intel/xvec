@@ -76,7 +76,7 @@ constexpr auto permute_byte_shuffle (const basic_vec<_Tp, _AbiT>& v, const basic
   static_assert(basic_vec<_Tp, _AbiT>::size <= 16 && basic_vec<_Ip, _AbiI>::size <= 16, "Data and indexes must fit first lane");
   // :TODO: In future both indexes and values could extend beyond lanes through
   // duplication or multi-lane index merging, which will be faster than using permutex[2]var_epi8.
-  return vec<_Tp, basic_vec<_Ip, _AbiI>::size>(_mm_shuffle_epi8(v.to_register(), indexes.to_register() & 0xf));
+  return vec<_Tp, basic_vec<_Ip, _AbiI>::size>(_mm_shuffle_epi8(v.to_register(), (indexes & uint8_t(0xf)).to_register()));
 }
 
 /// Permute one register of Intel AVX2 values.
@@ -162,7 +162,7 @@ inline target_overloads permutexvar {
     []<ymm_register<std::uint8_t> _Vec>(_Vec v, _Vec i)  { return _mm256_permutexvar_epi8(i.to_register(), v.to_register()); },
     []<zmm_register<std::uint8_t> _Vec>(_Vec v, _Vec i)  { return _mm512_permutexvar_epi8(i.to_register(), v.to_register()); },
   #else
-    []<ymm_register<std::uint8_t> _Vec>(_Vec v, _Vec i)  { return __m256i(_mm512_permutex2var_epi8_emulated(__m512i(v.to_register()), __m512i(i.to_register()), __m512i())); },
+    []<ymm_register<std::uint8_t> _Vec>(_Vec v, _Vec i)  { return __m256i(_mm512_permutex2var_epi8_emulated(v.to_register(), i.to_register(), __m512i())); },
     []<zmm_register<std::uint8_t> _Vec>(_Vec v, _Vec i)  { return _mm512_permutex2var_epi8_emulated(v.to_register(), i.to_register(), __m512i()); },
   #endif
 
@@ -180,7 +180,7 @@ inline target_overloads permutex2var {
     []<ymm_register<std::uint8_t> _Vec>(_Vec v0, _Vec i, _Vec v1)  { return _mm256_permutex2var_epi8(v0.to_register(), i.to_register(), v1.to_register()); },
     []<zmm_register<std::uint8_t> _Vec>(_Vec v0, _Vec i, _Vec v1)  { return _mm512_permutex2var_epi8(v0.to_register(), i.to_register(), v1.to_register()); },
   #else
-    []<ymm_register<std::uint8_t> _Vec>(_Vec v0, _Vec i, _Vec v1)  { return __m256i(_mm512_permutex2var_epi8_emulated(__m512i(v0.to_register()), __m512i(i.to_register()), v1.to_register())); },
+    []<ymm_register<std::uint8_t> _Vec>(_Vec v0, _Vec i, _Vec v1)  { return __m256i(_mm512_permutex2var_epi8_emulated(v0.to_register(), i.to_register(), v1.to_register())); },
     []<zmm_register<std::uint8_t> _Vec>(_Vec v0, _Vec i, _Vec v1)  { return _mm512_permutex2var_epi8_emulated(v0.to_register(), i.to_register(), v1.to_register()); },
   #endif
 
@@ -394,7 +394,7 @@ inline target_overloads compress_one_register {
     []<zmm_register<std::uint8_t> _Vec>(_Vec v, auto m, auto f)
       { return _Vec(_mm512_mask_compress_epi8(f.to_register(), m.to_register(), v.to_register())); },
 
-  // int 16
+    // int 16
     []<xmm_register<std::uint16_t> _Vec>(_Vec v, auto m, auto f)
       { return _Vec(_mm_mask_compress_epi16(f.to_register(), m.to_register(), v.to_register())); },
     []<ymm_register<std::uint16_t> _Vec>(_Vec v, auto m, auto f)
