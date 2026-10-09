@@ -1153,16 +1153,19 @@ constexpr basic_vec<_Tp, _Abi> mask_to_vec(generic_tag, const basic_mask<_Bytes,
   static_assert(_Value == 1 || _Value == -1, "Only some values are permitted for mask to vec output");
   static_assert(_Bytes == sizeof(_Tp), "Invalid mask or destination - differing sizes");
 
+  using _To = basic_vec<_Tp, _Abi>;
+  using _B = typename _To::builtin_type;
+
   if constexpr (std::integral<_Tp> && _Value == -1)
     // The mask is already entirely 0 or 1 bits, so nothing more to do
-    return basic_vec<_Tp, _Abi>(mask.to_builtin());
+    return _To(_B(mask.to_builtin()));
   else if constexpr (std::integral<_Tp> && _Value == 1)
     // The mask is entirely 0 or 1 bits so a logical shift will convert the MSB into an LSB.
-    return basic_vec<_Tp, _Abi>(mask.to_builtin() >> (sizeof(_Tp) * 8 - 1));
+    return _To(_B(mask.to_builtin() >> (sizeof(_Tp) * 8 - 1)));
   else
   {
-    constexpr auto _vs = basic_vec<_Tp, _Abi>(_Tp(_Value));
-    return select(mask, _vs, basic_vec<_Tp, _Abi>());
+    constexpr auto _vs = _To(_Tp(_Value));
+    return select(mask, _vs, _To());
   }
 }
 
@@ -1368,7 +1371,7 @@ constexpr auto get_n_bit_mask(compact_mask_tag, const _M&, simd_size_type _n)
   if constexpr (_M::size <= 64)
   {
     const auto clamped = std::min(_M::size(), _n);
-    return _M::from_builtin(clamped == 64 ? ~0ULL : (1ULL << clamped) - 1);
+    return _M::from_builtin(typename _M::builtin_type(clamped == 64 ? ~0ULL : (1ULL << clamped) - 1));
   }
   else
     return _M::from_builtin(_M(true).to_builtin() >> (_M::size - std::min(_n, _M::size())));
