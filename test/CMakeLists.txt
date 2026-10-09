@@ -250,7 +250,6 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     xvec_test_common
     INTERFACE
       -Wno-unknown-pragmas
-      -flax-vector-conversions
   )
 endif()
 
