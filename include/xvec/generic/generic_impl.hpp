@@ -1027,31 +1027,22 @@ constexpr basic_vec<_Tp, _Abi> abs(generic_tag, const basic_vec<_Tp, _Abi>& v)
 }
 ///@}
 
-/// @brief Compute the minimum or maximum of each element pair.
+/// @brief Compute the minimum or maximum of each element pair. The behaviour of
+/// the select exactly matches the behaviour of the underlying std::min and
+/// std::max functions. Note that elementwise_min/max, elementwise_minimum/maximum 
+/// and elementwise_minnum/maxnum all have different behaviours with regard to NaN
+/// values (e.g., introducing extra operations to handle NaNs in specified ways),
+/// but none of them match the behaviour of std::min/std::max.
 /// @tparam _Vp The type of vec to operate on
 /// @param lhs The left-hand value
 /// @param rhs The right-hand value
 /// @return The elementwise minimum or maximum vec
 ///@{
 template<vec_type _Vp>
-constexpr _Vp minimum(generic_tag, const _Vp& lhs, const _Vp& rhs)
-{
-  #if __has_builtin(__builtin_elementwise_min)
-    return __builtin_elementwise_min(lhs.to_builtin(), rhs.to_builtin());
-  #else
-    return select(lhs < rhs, lhs, rhs);
-  #endif
-}
+constexpr _Vp minimum(generic_tag, const _Vp& lhs, const _Vp& rhs) { return select(rhs < lhs, rhs, lhs); }
 
 template<vec_type _Vp>
-constexpr _Vp maximum(generic_tag, const _Vp& lhs, const _Vp& rhs)
-{
-  #if __has_builtin(__builtin_elementwise_max)
-    return __builtin_elementwise_max(lhs.to_builtin(), rhs.to_builtin());
-  #else
-    return select(lhs < rhs, rhs, lhs);
-  #endif
-}
+constexpr _Vp maximum(generic_tag, const _Vp& lhs, const _Vp& rhs) { return select(lhs < rhs, rhs, lhs); }
 ///@}
 
 /// @brief Saturated cast to a new type. Every element is converted to the new type, or
