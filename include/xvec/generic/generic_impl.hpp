@@ -953,7 +953,7 @@ template<typename _Tp, std::integral _Sp, typename _Abi>
 constexpr basic_vec<_Tp, _Abi> rotate_left(generic_tag, const basic_vec<_Tp, _Abi>& value, const basic_vec<_Sp, _Abi>& s) {
   constexpr int numBits = sizeof(_Tp) * 8;
   const auto sm = basic_vec<_Tp, _Abi>(s).to_builtin() % numBits;
-  const auto r = (value.to_builtin() << sm) | (value.to_builtin() >> (numBits - sm));
+  const auto r = (value.to_builtin() << sm) | (value.to_builtin() >> ((numBits - sm) % numBits));
   return basic_vec<_Tp, _Abi>(sm != 0 ? r : value.to_builtin());
 }
 
@@ -961,7 +961,7 @@ template<typename _Tp, std::integral _Sp, typename _Abi>
 constexpr basic_vec<_Tp, _Abi> rotate_right(generic_tag, const basic_vec<_Tp, _Abi>& value, const basic_vec<_Sp, _Abi>& s) {
   constexpr int numBits = sizeof(_Tp) * 8;
   const auto sm = basic_vec<_Tp, _Abi>(s).to_builtin() % numBits;
-  const auto r = (value.to_builtin() >> sm) | (value.to_builtin() << (numBits - sm));
+  const auto r = (value.to_builtin() >> sm) | (value.to_builtin() << ((numBits - sm) % numBits));
   return basic_vec<_Tp, _Abi>(sm != 0 ? r : value.to_builtin());
 }
 ///@}
@@ -983,7 +983,7 @@ template<vec_unsigned_integer _Vp, vec_integral _Sp>
 constexpr _Vp fsr(generic_tag, const _Vp& high, const _Vp& low, const _Sp& s) {
   constexpr uint8_t numBits = sizeof(typename _Vp::value_type) * 8;
   const auto sm = _Vp(s) % numBits;
-  const _Vp r = (low >> sm) | (high << (numBits - sm));
+  const _Vp r = (low >> sm) | (high << ((numBits - sm) % numBits));
   return select(sm != _Vp(), r, low);
 }
 
@@ -992,7 +992,7 @@ template<vec_unsigned_integer _Vp, vec_integral _Sp>
 constexpr _Vp fsl(generic_tag, const _Vp& high, const _Vp& low, const _Sp& s) {
   constexpr uint8_t numBits = sizeof(typename _Vp::value_type) * 8;
   const auto sm = _Vp(s) % numBits;
-  const _Vp r = (high << sm) | (low >> (numBits - sm));
+  const _Vp r = (high << sm) | (low >> ((numBits - sm) % numBits));
   return select(sm != _Vp(), r, high);
 }
 ///@}
