@@ -459,9 +459,9 @@ struct vec_traits
     constexpr auto _regSize = register_size<_Tp, _Np>;
     static_assert(_Np <= _regSize, "Converting to a smaller register loses data");
     
-    auto r = [=]<std::size_t... _Idx>(std::index_sequence<_Idx...>) {
-        return __builtin_shufflevector(v, v, (_Idx < _Np ? int(_Idx) : -1)...);
-      }(std::make_index_sequence<_regSize>());
+    auto r = [=]<int... _Idx>(std::integer_sequence<int, _Idx...>) {
+        return __builtin_shufflevector(v, v, (_Idx < _Np ? _Idx : -1)...);
+      }(std::make_integer_sequence<int, _regSize>());
 
     return register_type(r);
   }
