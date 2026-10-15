@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <immintrin.h>
+
 #include <xvec/detail/config.hpp>
 
 #include <concepts>
@@ -19,6 +21,10 @@ namespace _XVEC_NAMESPACE::simd
 /// Other vendors and target-specific tags can be provided to override the
 /// generic operations.
 struct generic_tag {};
+
+/// If a type supplied to get_register_type is invalid, mark that as such with
+/// this special type.
+struct invalid_register {};
 
 #if defined(__SSE__) and !defined(_XVEC_FORCE_SCALAR)
 
@@ -78,6 +84,54 @@ inline constexpr int register_size =
     (hasAvx    && (sizeof(_Tp) * _Np) > 16) ? (32 / sizeof(_Tp)) :
     16 / sizeof(_Tp);
 
+/// Generate the appropriate register type for the given vec type. For example,
+/// a small vector of ints would be converted to the smallest native register
+/// capable of storing all the bits, with padding added to bring it up to the
+/// register size. the type of the element is also taken into account (e.g.,
+/// `double` elements would convert to a `d` suffix like __m256d).
+template<typename T>
+consteval auto get_register_type() {
+    constexpr auto bytes = sizeof(T);
+
+    using _Tp = std::remove_cvref_t<decltype(std::declval<T&>()[0])>;
+
+    constexpr bool isFloat = std::same_as<float, _Tp>;
+    constexpr bool isDouble = std::same_as<double, _Tp>;
+
+    if constexpr (bytes > maxBytesInVec)
+      return invalid_register{};
+    else
+#if defined(__AVX512FP16__)
+    if constexpr (std::same_as<_Tp, _Float16>)
+    {
+        if constexpr      (bytes > 32) return __m512h();
+        else if constexpr (bytes > 16) return __m256h();
+        else                           return __m128h();
+    } else
+#endif
+#if defined(__AVX512F__)
+    if constexpr (bytes > 32)
+    {
+        if constexpr      (isFloat)  return __m512();
+        else if constexpr (isDouble) return __m512d();
+        else                         return __m512i();
+    } else
+#endif
+#if defined(__AVX__)
+    if constexpr (bytes > 16)
+    {
+        if constexpr      (isFloat)  return __m256();
+        else if constexpr (isDouble) return __m256d();
+        else                         return __m256i();
+    } else
+#endif
+    {
+        if constexpr      (isFloat)  return __m128();
+        else if constexpr (isDouble) return __m128d();
+        else                         return __m128i();
+    }
+}
+
 } // namespace detail
 
 #else
@@ -93,6 +147,15 @@ namespace detail
 /// target-specific code.
 inline constexpr int maxBytesInVec = 16;
 template<typename _Tp, int _Np> inline constexpr int register_size = maxBytesInVec / sizeof(_Tp);
+
+/// In generic targets, there is no way to know what the register type should
+/// be, so return an invalid_register type to indicate that the target does not
+/// support the requested type. This will cause a compile-time error if the user
+/// tries to use a type which is not supported by the target. Targets which
+/// support a specific register type should provide a specialization of this
+/// function which returns the appropriate register type.
+template<typename> consteval auto get_register_type() { return invalid_register{}; }
+
 }
 
 struct compact_mask_tag : public generic_tag {};

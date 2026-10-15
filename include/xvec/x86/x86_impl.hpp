@@ -440,7 +440,7 @@ constexpr void store_masked(x86_tag, const _Vp& value_original, std::span<_Up, _
   constexpr auto numSseElements = 16 / sizeof(_Up);
   auto impl = [=]<typename _Vec>(_Vec x, auto m, auto idx) {
     // Note that the mask register is zero extended to ensure no extra mask elements appear in it during `to_register'.
-    _mm_maskmoveu_si128(__m128i(x.to_register()), __m128i(grow<numSseElements>(m).to_register()), (char*)(to.data() + idx));
+    _mm_maskmoveu_si128(x.to_register(), grow<numSseElements>(m).to_register(), (char*)(to.data() + idx));
   };
 
   // Use the mask to limit the bounds of the write if requested by the user.
@@ -478,9 +478,9 @@ constexpr void store_masked(x86_avx2_tag, const _Vp& value_original, std::span<_
     const auto rc = permute<numAvxElements>(s, perm_uninitResize);
 
     if constexpr (sizeof(_Up) == 4)
-      _mm256_maskstore_epi32(reinterpret_cast<int*>(to.data() + idx), rm.to_register(), __m256i(rc.to_register()));
+      _mm256_maskstore_epi32(reinterpret_cast<int*>(to.data() + idx), rm.to_register(), rc.to_register());
     else if constexpr (sizeof(_Up) == 8)
-      _mm256_maskstore_epi64(reinterpret_cast<long long*>(to.data() + idx), rm.to_register(), __m256i(rc.to_register()));
+      _mm256_maskstore_epi64(reinterpret_cast<long long*>(to.data() + idx), rm.to_register(), rc.to_register());
     else
       static_assert(dependent_false<_Vec>, "Unimplemented masked store");
   };
@@ -505,24 +505,24 @@ constexpr void store_masked(x86_avx512_tag, const _Vp& value_original, std::span
   mandates_for_store(value_original, to, flags);
 
   target_overloads call_insn {
-    [=](xmm_register<uint8_t> auto v, auto m, auto p)  { _mm_mask_storeu_epi8(p, m, __m128i(v.to_register())); },
-    [=](xmm_register<uint16_t> auto v, auto m, auto p) { _mm_mask_storeu_epi16(p, m, __m128i(v.to_register())); },
-    [=](xmm_register<uint32_t> auto v, auto m, auto p) { _mm_mask_storeu_epi32(p, m, __m128i(v.to_register())); },
-    [=](xmm_register<uint64_t> auto v, auto m, auto p) { _mm_mask_storeu_epi64(p, m, __m128i(v.to_register())); },
+    [=](xmm_register<uint8_t> auto v, auto m, auto p)  { _mm_mask_storeu_epi8(p, m, v.to_register()); },
+    [=](xmm_register<uint16_t> auto v, auto m, auto p) { _mm_mask_storeu_epi16(p, m, v.to_register()); },
+    [=](xmm_register<uint32_t> auto v, auto m, auto p) { _mm_mask_storeu_epi32(p, m, v.to_register()); },
+    [=](xmm_register<uint64_t> auto v, auto m, auto p) { _mm_mask_storeu_epi64(p, m, v.to_register()); },
 
-    [=](ymm_register<uint8_t> auto v, auto m, auto p)  { _mm256_mask_storeu_epi8(p, m, __m256i(v.to_register())); },
-    [=](ymm_register<uint16_t> auto v, auto m, auto p) { _mm256_mask_storeu_epi16(p, m, __m256i(v.to_register())); },
-    [=](ymm_register<uint32_t> auto v, auto m, auto p) { _mm256_mask_storeu_epi32(p, m, __m256i(v.to_register())); },
-    [=](ymm_register<uint64_t> auto v, auto m, auto p) { _mm256_mask_storeu_epi64(p, m, __m256i(v.to_register())); },
+    [=](ymm_register<uint8_t> auto v, auto m, auto p)  { _mm256_mask_storeu_epi8(p, m, v.to_register()); },
+    [=](ymm_register<uint16_t> auto v, auto m, auto p) { _mm256_mask_storeu_epi16(p, m, v.to_register()); },
+    [=](ymm_register<uint32_t> auto v, auto m, auto p) { _mm256_mask_storeu_epi32(p, m, v.to_register()); },
+    [=](ymm_register<uint64_t> auto v, auto m, auto p) { _mm256_mask_storeu_epi64(p, m, v.to_register()); },
 
-    [=](zmm_register<uint8_t> auto v, auto m, auto p)  { _mm512_mask_storeu_epi8(p, m, __m512i(v.to_register())); },
-    [=](zmm_register<uint16_t> auto v, auto m, auto p) { _mm512_mask_storeu_epi16(p, m, __m512i(v.to_register())); },
-    [=](zmm_register<uint32_t> auto v, auto m, auto p) { _mm512_mask_storeu_epi32(p, m, __m512i(v.to_register())); },
-    [=](zmm_register<uint64_t> auto v, auto m, auto p) { _mm512_mask_storeu_epi64(p, m, __m512i(v.to_register())); },
+    [=](zmm_register<uint8_t> auto v, auto m, auto p)  { _mm512_mask_storeu_epi8(p, m, v.to_register()); },
+    [=](zmm_register<uint16_t> auto v, auto m, auto p) { _mm512_mask_storeu_epi16(p, m, v.to_register()); },
+    [=](zmm_register<uint32_t> auto v, auto m, auto p) { _mm512_mask_storeu_epi32(p, m, v.to_register()); },
+    [=](zmm_register<uint64_t> auto v, auto m, auto p) { _mm512_mask_storeu_epi64(p, m, v.to_register()); },
 
-    [=](xmm_register<unsigned __int128> auto v, auto m, auto p) { _mm_mask_storeu_epi64(p, dupBits(m), __m128i(v.to_register())); },
-    [=](ymm_register<unsigned __int128> auto v, auto m, auto p) { _mm256_mask_storeu_epi64(p, dupBits(m), __m256i(v.to_register())); },
-    [=](zmm_register<unsigned __int128> auto v, auto m, auto p) { _mm512_mask_storeu_epi64(p, dupBits(m), __m512i(v.to_register())); },
+    [=](xmm_register<unsigned __int128> auto v, auto m, auto p) { _mm_mask_storeu_epi64(p, dupBits(m), v.to_register()); },
+    [=](ymm_register<unsigned __int128> auto v, auto m, auto p) { _mm256_mask_storeu_epi64(p, dupBits(m), v.to_register()); },
+    [=](zmm_register<unsigned __int128> auto v, auto m, auto p) { _mm512_mask_storeu_epi64(p, dupBits(m), v.to_register()); },
 
     [=](auto unhandled, auto, auto) { static_assert(dependent_false<decltype(unhandled)>, "Unimplemented partial masked store"); }
   };
