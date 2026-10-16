@@ -259,7 +259,7 @@ select_if_else(compact_mask_tag, const _Mp& if_mask, const _Mp& if_true, const _
 /// @param if_true The value to use if the mask bit is set
 /// @param if_false The value to use if the mask bit is clear
 /// @return The selected simd mask
- template<mask_type _Mp>
+template<mask_type _Mp>
 constexpr _Mp
 select_if_else(generic_tag, const _Mp& mask, const _Mp& if_true, const _Mp& if_false) noexcept
 { return _Mp::from_builtin(mask.to_builtin() ? if_true.to_builtin() : if_false.to_builtin()); }

@@ -398,15 +398,15 @@ public:
   constexpr basic_vec& operator++() noexcept requires requires (basic_vec v) { v + basic_vec(_Tp(1)); }
     { *this = *this + basic_vec(_Tp(1)); return *this; }
 
-    /// Increment each element and return the original vector.
+  /// Increment each element and return the original vector.
   constexpr basic_vec  operator++(int) noexcept requires requires (basic_vec v) { v + basic_vec(_Tp(1)); }
     { const auto original = *this; *this = *this + basic_vec(_Tp(1)); return original; }
 
-    /// Decrement each element and return the updated vector.
+  /// Decrement each element and return the updated vector.
   constexpr basic_vec& operator--() noexcept requires requires (basic_vec v) { v - basic_vec(_Tp(1)); }
     { *this = *this - basic_vec(_Tp(1)); return *this; }
 
-    /// Decrement each element and return the original vector.
+  /// Decrement each element and return the original vector.
   constexpr basic_vec  operator--(int) noexcept requires requires (basic_vec v) { v - basic_vec(_Tp(1)); }
     { const auto original = *this; *this = *this - basic_vec(_Tp(1)); return original; }
 
@@ -439,7 +439,7 @@ public:
   friend constexpr basic_vec operator&(const basic_vec& lhs, const basic_vec& rhs) noexcept requires detail::supported_binary_op<value_type, std::bit_and<>>
     { return detail::do_operator<std::bit_and<>>(lhs, rhs); }
 
-    /// Compute the bitwise OR of corresponding elements.
+  /// Compute the bitwise OR of corresponding elements.
   friend constexpr basic_vec operator|(const basic_vec& lhs, const basic_vec& rhs) noexcept requires detail::supported_binary_op<value_type, std::bit_or<>>
     { return detail::do_operator<std::bit_or<>>(lhs, rhs); }
 
@@ -479,27 +479,27 @@ public:
     requires detail::supported_relational_op<value_type, std::equal_to<>>
     { return detail::do_operator<std::equal_to<>>(lhs, rhs); }
 
-    /// Compare corresponding elements for inequality.
+  /// Compare corresponding elements for inequality.
   friend constexpr mask_type operator!=(const basic_vec& lhs, const basic_vec& rhs) noexcept
     requires detail::supported_relational_op<value_type, std::not_equal_to<>>
     { return detail::do_operator<std::not_equal_to<>>(lhs, rhs); }
 
-    /// Compare corresponding elements using less-than.
+  /// Compare corresponding elements using less-than.
   friend constexpr mask_type operator< (const basic_vec& lhs, const basic_vec& rhs) noexcept
     requires detail::supported_relational_op<value_type, std::less<>>
     { return detail::do_operator<std::less<>>(lhs, rhs); }
 
-    /// Compare corresponding elements using less-than-or-equal.
+  /// Compare corresponding elements using less-than-or-equal.
   friend constexpr mask_type operator<=(const basic_vec& lhs, const basic_vec& rhs) noexcept
     requires detail::supported_relational_op<value_type, std::less_equal<>>
     { return detail::do_operator<std::less_equal<>>(lhs, rhs); }
 
-    /// Compare corresponding elements using greater-than.
+  /// Compare corresponding elements using greater-than.
   friend constexpr mask_type operator> (const basic_vec& lhs, const basic_vec& rhs) noexcept
     requires detail::supported_relational_op<value_type, std::greater<>>
     { return detail::do_operator<std::greater<>>(lhs, rhs); }
 
-    /// Compare corresponding elements using greater-than-or-equal.
+  /// Compare corresponding elements using greater-than-or-equal.
   friend constexpr mask_type operator>=(const basic_vec& lhs, const basic_vec& rhs) noexcept
     requires detail::supported_relational_op<value_type, std::greater_equal<>>
     { return detail::do_operator<std::greater_equal<>>(lhs, rhs); }
@@ -514,37 +514,37 @@ public:
     requires detail::supported_binary_op<value_type, std::plus<>>
     { lhs = lhs + rhs; return lhs; }
 
-    /// Subtract corresponding elements and assign the result.
+  /// Subtract corresponding elements and assign the result.
   friend constexpr basic_vec& operator-=(basic_vec& lhs, const basic_vec& rhs) noexcept
     requires detail::supported_binary_op<value_type, std::minus<>>
     { lhs = lhs - rhs; return lhs; }
 
-    /// Multiply corresponding elements and assign the result.
+  /// Multiply corresponding elements and assign the result.
   friend constexpr basic_vec& operator*=(basic_vec& lhs, const basic_vec& rhs) noexcept
     requires detail::supported_binary_op<value_type, std::multiplies<>>
     { lhs = lhs * rhs; return lhs; }
 
-    /// Divide corresponding elements and assign the result.
+  /// Divide corresponding elements and assign the result.
   friend constexpr basic_vec& operator/=(basic_vec& lhs, const basic_vec& rhs) noexcept
     requires detail::supported_binary_op<value_type, std::divides<>>
     { lhs = lhs / rhs; return lhs; }
 
-    /// Compute element-wise remainders and assign the result.
+  /// Compute element-wise remainders and assign the result.
   friend constexpr basic_vec& operator%=(basic_vec& lhs, const basic_vec& rhs) noexcept
     requires detail::supported_binary_op<value_type, std::modulus<>>
     { lhs = lhs % rhs; return lhs; }
 
-    /// Compute the element-wise bitwise AND and assign the result.
+  /// Compute the element-wise bitwise AND and assign the result.
   friend constexpr basic_vec& operator&=(basic_vec& lhs, const basic_vec& rhs) noexcept
     requires detail::supported_binary_op<value_type, std::bit_and<>>
     { lhs = lhs & rhs; return lhs; }
 
-    /// Compute the element-wise bitwise OR and assign the result.
+  /// Compute the element-wise bitwise OR and assign the result.
   friend constexpr basic_vec& operator|=(basic_vec& lhs, const basic_vec& rhs) noexcept
     requires detail::supported_binary_op<value_type, std::bit_or<>>
     { lhs = lhs | rhs; return lhs; }
 
-    /// Compute the element-wise bitwise XOR and assign the result.
+  /// Compute the element-wise bitwise XOR and assign the result.
   friend constexpr basic_vec& operator^=(basic_vec& lhs, const basic_vec& rhs) noexcept
     requires detail::supported_binary_op<value_type, std::bit_xor<>>
     { lhs = lhs ^ rhs; return lhs; }
@@ -558,15 +558,15 @@ public:
   friend constexpr basic_vec operator<<(const basic_vec& lhs, const basic_vec& rhs) noexcept requires detail::supported_binary_op<value_type, detail::bit_lshift<>>
     { return detail::do_operator<detail::bit_lshift<>>(lhs, rhs); }
 
-    /// Shift elements right by corresponding element-wise amounts.
+  /// Shift elements right by corresponding element-wise amounts.
   friend constexpr basic_vec operator>>(const basic_vec& lhs, const basic_vec& rhs) noexcept requires detail::supported_binary_op<value_type, detail::bit_rshift<>>
     { return detail::do_operator<detail::bit_rshift<>>(lhs, rhs); }
 
-    /// Shift every element left by a shared amount.
+  /// Shift every element left by a shared amount.
   friend constexpr basic_vec operator<<(const basic_vec& lhs, simd_size_type rhs) noexcept requires detail::supported_binary_op<value_type, detail::bit_lshift<>>
     { return lhs << basic_vec(value_type(rhs)); }
 
-    /// Shift every element right by a shared amount.
+  /// Shift every element right by a shared amount.
   friend constexpr basic_vec operator>>(const basic_vec& lhs, simd_size_type rhs) noexcept requires detail::supported_binary_op<value_type, detail::bit_rshift<>>
     { return lhs >> basic_vec(value_type(rhs)); }
   /// @} cpp26_binary
@@ -579,7 +579,7 @@ public:
     requires detail::supported_binary_op<value_type, detail::bit_lshift<>>
     { lhs = lhs << shift; return lhs; }
 
-    /// Shift elements right by element-wise amounts and assign the result.
+  /// Shift elements right by element-wise amounts and assign the result.
   friend constexpr basic_vec& operator>>=(basic_vec& lhs, const basic_vec& shift) noexcept
     requires detail::supported_binary_op<value_type, detail::bit_rshift<>>
   { lhs = lhs >> shift; return lhs; }
