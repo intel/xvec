@@ -35,6 +35,28 @@ inline constexpr bool are_all_sizes_equal = (... && (Size == Sizes));
 
 } // End namespace detail
 
+/**
+ * @defgroup cpp29_p2929 Chunked invocation
+ * @brief Invoke a callable on corresponding chunks of vectors or masks.
+ *
+ * Proposed in P2929, "chunked_invoke", previously named simd_invoke.
+ *
+ * @see https://wg21.link/P2929
+ * @{
+ */
+
+/// @brief Invoke a callable on corresponding vector or mask chunks.
+/// @tparam _SuggestedN Chunk size, or zero to deduce a common native width.
+/// @tparam _Fn The callable type.
+/// @tparam _Arg0 The first vector or mask argument type.
+/// @tparam _Args The remaining vector or mask argument types.
+/// @param fn The callable invoked on each set of corresponding chunks.
+/// @param arg0 The first vector or mask argument.
+/// @param args The remaining vector or mask arguments.
+/// @return Concatenated vector or mask results, or void for a void-returning callable.
+/// @details All arguments must have equal element counts. The final chunk may
+/// be smaller than the selected chunk size. The callable may accept a trailing
+/// argument giving the beginning index of the chunk.
 template<simd_size_type _SuggestedN = 0, typename _Fn, vec_or_mask_type _Arg0, vec_or_mask_type... _Args>
 constexpr auto chunked_invoke(_Fn fn, const _Arg0& arg0, const _Args&... args)
 {
@@ -92,5 +114,7 @@ constexpr auto chunked_invoke(_Fn fn, const _Arg0& arg0, const _Args&... args)
   }(std::make_integer_sequence<simd_size_type, numBlocks>{});
 
 }
+
+/// @} cpp29_p2929
 
 } // namespace _XVEC_NAMESPACE::simd

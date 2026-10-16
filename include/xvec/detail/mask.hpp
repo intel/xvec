@@ -14,7 +14,7 @@
 #include <type_traits>
 #include <cstddef>
 #include <concepts>
-#include <functional> 
+#include <functional>
 
 #include <iostream>
 
@@ -23,86 +23,179 @@
 namespace _XVEC_NAMESPACE::simd
 {
 
-/// \defgroup simd_mask_cassign Mask compound assignment operators
-/// @brief Compound mask assignment operations.
+/**
+ * @defgroup cpp26_mask_overview C++26: Mask overview
+ * @brief Mask types, element counts, special members, and range access.
+ *
+ * @see https://eel.is/c++draft/simd.mask.overview
+ */
 
-/// @defgroup simd_mask_binary Mask binary operators
-/// @brief Apply an operator to each pair or respective bits from the input.
+/**
+ * @defgroup cpp26_mask_ctor C++26: Mask constructors
+ * @brief Construct masks from boolean values, generators, bitsets, integers, and other masks.
+ *
+ * @see https://eel.is/c++draft/simd.mask.ctor
+ */
 
-/// \defgroup simd_mask_reduce Mask reduction operations
-/// @brief Reduce a simd mask to a single scalar value
+/**
+ * @defgroup cpp26_mask_conv C++26: Mask conversions
+ * @brief Convert masks to vectors and packed-bit representations.
+ *
+ * @see https://eel.is/c++draft/simd.mask.conv
+ */
 
-/// @defgroup simd_mask_unary Mask unary operators
-/// @brief Apply an operator to each bit in the input to generate a new bitwise mask
+/**
+ * @defgroup cpp26_mask_subscr C++26: Mask subscripting
+ * @brief Access individual mask elements or select them using an index vector.
+ *
+ * @see https://eel.is/c++draft/simd.mask.subscr
+ */
 
-/// @defgroup simd_mask_constructor Mask constructors
-/// @brief Construct simd masks
+/**
+ * @defgroup cpp26_mask_unary C++26: Unary mask operators
+ * @brief Apply unary operations to mask elements.
+ *
+ * @see https://eel.is/c++draft/simd.mask.unary
+ */
 
-/// @brief A mask type
-/// This allows the vector SIMD classes to handle all the required bit mask type
-/// operations in a uniform manner without having to care about the underlying
-/// mask type. The mask type can be one of two major styles:
+/**
+ * @defgroup cpp26_mask_binary C++26: Binary mask operators
+ * @brief Apply logical and bitwise operations to corresponding mask elements.
+ *
+ * @see https://eel.is/c++draft/simd.mask.binary
+ */
+
+/**
+ * @defgroup cpp26_mask_cassign C++26: Mask compound assignment
+ * @brief Apply bitwise operations and assign their results.
+ *
+ * @see https://eel.is/c++draft/simd.mask.cassign
+ */
+
+/**
+ * @defgroup cpp26_mask_comparison C++26: Mask comparisons
+ * @brief Compare corresponding mask elements.
+ *
+ * @see https://eel.is/c++draft/simd.mask.comparison
+ */
+
+/**
+ * @defgroup cpp26_mask_cond C++26: Exposition-only mask selection
+ * @brief Implementation helpers for element-wise conditional selection.
+ *
+ * @see https://eel.is/c++draft/simd.mask.cond
+ */
+
+/**
+ * @defgroup cpp26_mask_reductions C++26: Mask reductions
+ * @brief Query mask elements, count selected elements, and find their indexes.
+ *
+ * @see https://eel.is/c++draft/simd.mask.reductions
+ */
+
+/**
+ * @defgroup cpp29_p3440 Create mask from count
+ * @brief Create a mask with a specified number of leading true elements.
+ *
+ * Proposed in P3440 for uses such as handling loop remainders.
+ *
+ * @see https://wg21.link/P3440
+ */
+
+/// @brief A mask containing boolean elements.
+/// @ingroup cpp26_mask_overview
+/// @tparam _Bytes The associated vector element size in bytes.
+/// @tparam _Abi The ABI determining the mask representation and element count.
+/// @details Provides a uniform interface over target-specific mask representations.
 ///
-///   Wide mask (e.g., Intel SSE, Intel AVX, Intel AVX2): A full vector of bits
-///   with the same size as the SIMD class being used. Each element is all zeros
-///   or all ones. Most x86 blend instructions use only the top bit, but having
-///   a complete set of bits is useful for performing blend on other targets
-///   using bitwise and/or/not/xor instructions.
+/// Wide masks, such as those used with Intel SSE and AVX, represent each boolean
+/// element using a vector element whose bits are all zero or all one.
 ///
-///   Compact or narrow mask predicate (e.g., Intel AVX-512): A bitset
-///   containing only the required number of bits for the number of elements in
-///   the SIMD class being used. For example, __m256 treated as `float' elements
-///   would have 8 bits. An ExtInt is used to allow the mask to be sized
-///   arbitrarily.
+/// Compact masks, such as those used with Intel AVX-512, represent each boolean
+/// element using a single bit.
 ///
-/// This mask class hides these differences and allows masks to be converted for
-/// use in blends, conditionals, selections, as well as operated on using and,
-/// or, not, xor, and so on. For more advanced uses (e.g., popcount, any, none,
-/// etc), the mask can be exported to a bitset, and bitset's own rich set of
-/// operations used, instead of defining them all in this mask class.
+/// The class hides these representation differences for logical operations,
+/// comparisons, selection, and conversion to packed-bit representations.
 template<std::size_t _Bytes, typename _Abi>
 class basic_mask
 {
 public:
 
+  /// Implementation traits for this mask type.
+  /// @internal
   using traits = detail::mask_traits<target_tag, _Bytes, _Abi::num_elements>;
+
+  /// Compiler-specific storage representation of the mask.
+  /// @ingroup xvec_interop
   using builtin_type = typename traits::builtin_type;
 
+  /// @addtogroup cpp26_mask_overview
+  /// @{
+
+  /// The ABI type of this mask.
   using abi_type = _Abi;
 
+  /// The boolean type of each mask element.
   using value_type = bool;
 
-  using iterator = simd_iterator<basic_mask>;  ///< An iterator which allows a mask to be treated as a range.
+  /// Iterator over mask elements.
+  using iterator = simd_iterator<basic_mask>;
+
+  /// Iterator providing read-only access to mask elements.
   using const_iterator = simd_iterator<const basic_mask>;
 
-  /// Return the number of elements contained in the mask
+  /// Return the number of elements contained in the mask.
   static constexpr auto size = size_constant<_Abi::num_elements>{};
+
+  /// @} cpp26_mask_overview
 
 private:
 
   /// The builtin mask value.
+  /// @internal
   builtin_type mask;
 
 public:
 
+  /// @addtogroup cpp26_mask_overview
+  /// @{
+
+  /// Default-construct a mask.
   constexpr basic_mask() = default;
+
+  /// Copy-construct a mask.
   constexpr basic_mask(const basic_mask&) = default;
+
+  /// Move-construct a mask.
   constexpr basic_mask(basic_mask&&) noexcept = default;
+
+  /// Copy-assign a mask.
   constexpr basic_mask& operator=(const basic_mask&) = default;
+
+  /// Move-assign a mask.
   constexpr basic_mask& operator=(basic_mask&&) noexcept = default;
+
+  /// @} cpp26_mask_overview
+
+  /// Allow a mask to be constructed from the compiler's own representation. The
+  /// compiler may use multiple or partial target registers in its
+  /// representation. This constructor allows a mask to be built from the output
+  /// of an overloaded operator, a builtin, and so on.
+  /// @ingroup xvec_interop
+  constexpr basic_mask(const builtin_type& m) noexcept : mask(m) {}
+
+  /// @addtogroup cpp26_mask_ctor
+  /// @{
 
   /// @brief Build a mask from a boolean value.
   /// @param b The boolean value to broadcast to all mask elements.
   constexpr explicit basic_mask(std::same_as<value_type> auto b) noexcept :
     mask([b] { if (b) return !basic_mask(); else return basic_mask(); }()) {}
 
-  /// @brief Build a mask from a set of bits stored in an integral value.
-  /// Each bit of the mask will be set or cleared as determined by the
-  /// respective bit of the input integral. If the mask has a size bigger
-  /// than the number of bits in the supplied integral value the remaining bits
-  /// will be cleared.
-  /// @ingroup simd_mask_constructor
-  /// @param m The unsigned integral value from which to extract the bits into a mask.
+  /// @brief Build a mask from the bits of an unsigned integral value.
+  /// Each mask element is initialized from the corresponding input bit.
+  /// Elements beyond the width of the input value are initialized to false.
+  /// @param m The unsigned integral value supplying the bits.
   template <std::unsigned_integral T> requires (!std::same_as<T, value_type>)
   constexpr explicit basic_mask(T m) noexcept
     : basic_mask([m]() {
@@ -112,29 +205,22 @@ public:
           return detail::generate_mask_from_unsigned<basic_mask>(target, m);
     }()) {}
 
-  /// @brief Create a mask from a mask representing a different vec type.
-  /// The created mask is equivalent to the supplied input mask, but where
-  /// the type of element being represented has been changed. Each bit of the
-  /// new mask is set or cleared corresponding to the respective value of the
-  /// supplied mask.
-  /// @ingroup simd_mask_constructor
-  /// @tparam _UBytes The number of bytes in the source mask
-  /// @tparam _UAbi The ABI of the source mask elements
-  /// @param m The input mask from which to create the new mask
+  /// @brief Convert a mask with the same number of elements.
+  /// Each output element retains the corresponding input boolean value.
+  /// @tparam _UBytes The source mask's associated vector element size in bytes.
+  /// @tparam _UAbi The source mask ABI.
+  /// @param m The mask to convert.
   template<std::size_t _UBytes, typename _UAbi>
   requires (basic_mask<_UBytes, _UAbi>::size() == size())
   explicit constexpr basic_mask(const basic_mask<_UBytes, _UAbi>& m) : mask(detail::convert_mask<basic_mask>(target, m)) {}
 
-  /// @brief Generate a mask using a generator to compute each bit.
-  /// For each bit element the generator function is given the index of the
-  /// element and will return the value (true or false) to be written into that
-  /// mask element position. If the generator function is constexpr this can be used to
-  /// construct pre-computed mask values.
-  /// @ingroup simd_mask_constructor
-  /// @param fn The generator function to compute each bit.
+  /// @brief Generate each mask element from its index.
+  /// @param fn The generator returning a boolean value for each element index.
   constexpr basic_mask(std::invocable<std::integral_constant<simd_size_type, 0>> auto fn) : basic_mask(detail::generate_mask<basic_mask>(target, fn)) {}
 
-  /// Generate a mask which represents the bottom N bits of the mask.
+  /// @} cpp26_mask_ctor
+
+  /// Generate a mask with the first _n elements set to true.
   /// @internal
   static constexpr basic_mask __mask_from_count(simd_size_type _n)
   {
@@ -146,55 +232,69 @@ public:
       return detail::get_n_bit_mask(target, basic_mask(), _n);
   }
 
-  /// @brief Allow a mask to be built from the corresponding bitset.
-  /// The mask is created such that each bit is set or cleared
-  /// corresponding to the value of the respective bit from the input bitset.
-  /// @ingroup simd_mask_constructor
-  /// @param b The bitset input value
+  /// @brief Construct a mask from the corresponding bitset.
+  /// @ingroup cpp26_mask_ctor
+  /// @param b The bitset supplying the value of each mask element.
   // :TODO: Not efficient if the bitset isn't constexpr. Need a better way to deal with that eventually.
   template<std::same_as<std::bitset<size()>> T>
   constexpr basic_mask(const T& b) noexcept : basic_mask([&](simd_size_type idx) { return b[idx]; }) {}
 
-  /// Range interface.
-  ///@{
-  // missing begin for non-const
-  constexpr iterator begin() noexcept { return {*this, 0}; }
-  constexpr const_iterator begin() const noexcept { return {*this, 0}; }
-  constexpr const_iterator cbegin() const noexcept { return {*this, 0}; }
-  constexpr std::default_sentinel_t end() const noexcept { return {}; }
-  constexpr std::default_sentinel_t cend() const noexcept { return {}; }
-  ///@}
+  /// @addtogroup cpp26_mask_overview
+  /// @{
 
-  /// Return the underlying mask value. This is explicit so that no silent conversions are
-  /// permitted, which often break in unexpected ways. To avoid confusion, the user has to
-  /// explicitly switch to the underlying type.
+  /// Return an iterator to the first element.
+  constexpr iterator begin() noexcept { return {*this, 0}; }
+
+  /// Return a const iterator to the first element.
+  constexpr const_iterator begin() const noexcept { return {*this, 0}; }
+
+  /// Return a const iterator to the first element.
+  constexpr const_iterator cbegin() const noexcept { return {*this, 0}; }
+
+  /// Return the end sentinel.
+  constexpr std::default_sentinel_t end() const noexcept { return {}; }
+
+  /// Return the end sentinel.
+  constexpr std::default_sentinel_t cend() const noexcept { return {}; }
+
+  /// @} cpp26_mask_overview
+
+  /// Return the underlying mask representation explicitly.
+  /// @ingroup xvec_interop
   // :TODO: Maybe to_builtin is sufficient?
   constexpr explicit operator builtin_type() { return mask; }
 
-  /// @brief Convert a mask into a vec value where each element is set to 0 or
-  /// 1 depending upon the state of its respective bit from the mask.
-  /// @ingroup simd_constructor
+  /// @brief Convert the mask to a signed integral vector.
+  /// Each output element is 1 if the corresponding mask element is true,
+  /// or 0 otherwise.
+  /// @ingroup cpp26_mask_conv
   constexpr operator typename traits::signed_vec_for_mask() const { return detail::mask_to_vec<1, typename traits::element_signed_container_type>(target, *this); }
+
+  /// @addtogroup xvec_interop
+  /// @{
 
   /// Return the builtin mask value directly.
   constexpr auto to_builtin() const { return mask; }
 
-  /// Construct a mask directly from the underlying builtin. This builtin might
-  /// be a type which can be used for a standard constructor (e.g.,
-  /// integral-like) so the `from_builtin` ensures that the desired effect is
-  /// achieved directly.
-  static constexpr basic_mask from_builtin(const auto& m) { basic_mask bm; bm.mask = traits::truncate_to_size(m); return bm; }
+  /// Construct a mask directly from its builtin representation.
+  /// This named operation distinguishes representation conversion from
+  /// construction using a public value type such as an unsigned integer.
+  /// @param m The builtin mask representation.
+  static constexpr basic_mask from_builtin(const builtin_type& m) { basic_mask bm; bm.mask = traits::truncate_to_size(m); return bm; }
 
   /// Convert the mask into a register which can be passed to an intrinsic.
   constexpr auto to_register() const noexcept { return traits::to_register(mask); }
 
-  /// Return a bitset representation of the values. std::bitset has a rich API and it makes more
-  /// sense to use it directly rather than provide similar operations in mask instead (e.g.,
-  /// avoid duplication, alternative implementations, etc.)
+  /// @} xvec_interop
+
+  /// @addtogroup cpp26_mask_conv
+  /// @{
+
+  /// Return a bitset containing the value of each mask element.
   constexpr std::bitset<size()> to_bitset() const noexcept { return detail::mask_to_bitset(target, *this); }
 
-  /// Return an unsigned integral representation of the values using ullong. For
-  /// masks which are bigger than a ullong, the upper bits must be zero.
+  /// Return an unsigned integral representation of the mask elements.
+  /// Elements beyond the width of unsigned long long must be false.
   constexpr unsigned long long to_ullong() const {
     if (std::is_constant_evaluated())
     {
@@ -212,105 +312,146 @@ public:
       return detail::mask_to_ullong(target, *this);
   }
 
+  /// @} cpp26_mask_conv
+
+  /// @addtogroup cpp26_mask_unary
   /// @{
-  /// @ingroup simd_mask_unary
-  /// @brief Construct a new mask by applying the unary operator to each bit of the input mask.
+
+  /// Negate each boolean mask element.
   constexpr basic_mask operator!() const noexcept { return detail::builtin_operator(target, *this, std::bit_not{}); }
-  
+
+  /// Return a signed integral vector containing 1 for true elements and 0 otherwise.
   constexpr typename traits::signed_vec_for_mask operator+() const noexcept { return detail::mask_to_vec<1, typename traits::element_signed_container_type>(target, *this); }
 
+  /// Return a signed integral vector containing -1 for true elements and 0 otherwise.
   constexpr typename traits::signed_vec_for_mask operator-() const noexcept { return detail::mask_to_vec<-1, typename traits::element_signed_container_type>(target, *this); }
 
+  /// Return the element-wise bitwise complement of the vector produced by unary plus.
   constexpr typename traits::signed_vec_for_mask operator~() const noexcept { return ~(+*this); }
-  /// @}
 
-  /// @brief Permute a mask value by indexing it using the unsigned integral indexes supplied in another basic_vec value.
-  /// @tparam _AbiU The index vec value ABI
-  /// the permuted basic_vec value, and has the same number of elements as the index basic_vec.
-  /// @tparam _Up The index type, which must be unsigned integral.
-  /// @param indexes The indexes by which to permute
-  /// @return The contents of this mask permuted by the indexes. The output of each element position is this[indexes[iota()]].
+  /// @} cpp26_mask_unary
+
+  /// @addtogroup cpp26_mask_subscr
+  /// @{
+
+  /// @brief Select mask elements using an integral index vector.
+  /// @param indexes The indexes selecting mask elements.
+  /// @return A mask containing the selected elements.
   constexpr auto operator[](const vec_integral auto& indexes) const { return permute(*this, indexes); }
 
-  /// Return the value of a single element at the given index position.
+  /// @brief Return the mask element at the specified position.
+  /// @param pos The element index, which must be less than size() and non-negative.
   constexpr bool operator[](simd_size_type pos) const& { return detail::subscript(target, *this, pos); }
 
-  ///@{
-  /// @ingroup simd_mask_binary
-  /// @param lhs The left hand value in the operation
-  /// @param rhs The right hand value in the operation
-  /// @return A mask value which records the result of applying the bit operator to respective bits of the input masks.
+  /// @} cpp26_mask_subscr
+
+  /// @addtogroup cpp26_mask_binary
+  /// @{
+
+  /// Compute the element-wise logical AND.
   friend constexpr basic_mask operator&&(const basic_mask& lhs, const basic_mask& rhs) noexcept
     { return detail::builtin_operator(target, lhs, rhs, std::bit_and{}); }
+
+  /// Compute the element-wise logical OR.
   friend constexpr basic_mask operator||(const basic_mask& lhs, const basic_mask& rhs) noexcept
     { return detail::builtin_operator(target, lhs, rhs, std::bit_or{}); }
+
+  /// Compute the element-wise bitwise AND.
   friend constexpr basic_mask operator&(const basic_mask& lhs, const basic_mask& rhs) noexcept
     { return detail::builtin_operator(target, lhs, rhs, std::bit_and{}); }
+
+  /// Compute the element-wise bitwise OR.
   friend constexpr basic_mask operator|(const basic_mask& lhs, const basic_mask& rhs) noexcept
     { return detail::builtin_operator(target, lhs, rhs, std::bit_or{}); }
+
+  /// Compute the element-wise bitwise XOR.
   friend constexpr basic_mask operator^(const basic_mask& lhs, const basic_mask& rhs) noexcept
     { return detail::builtin_operator(target, lhs, rhs, std::bit_xor{}); }
-  /// @}
 
+  /// @} cpp26_mask_binary
+
+  /// @addtogroup cpp26_mask_cassign
   /// @{
-  /// @ingroup simd_mask_cassign
-  /// @param rhs The right hand value of the assignment operator
-  /// @return The bitwise operation value
+
+  /// Compute the element-wise bitwise AND and assign the result.
   constexpr basic_mask& operator&=(const basic_mask& rhs) noexcept { *this = *this & rhs; return *this; }
-  constexpr basic_mask& operator|=(const basic_mask& rhs) noexcept { *this = *this | rhs; return *this; }
-  constexpr basic_mask& operator^=(const basic_mask& rhs) noexcept { *this = *this ^ rhs; return *this; }
-  /// @}
 
+  /// Compute the element-wise bitwise OR and assign the result.
+  constexpr basic_mask& operator|=(const basic_mask& rhs) noexcept { *this = *this | rhs; return *this; }
+
+  /// Compute the element-wise bitwise XOR and assign the result.
+  constexpr basic_mask& operator^=(const basic_mask& rhs) noexcept { *this = *this ^ rhs; return *this; }
+
+  /// @} cpp26_mask_cassign
+
+  /// @addtogroup cpp26_mask_comparison
   /// @{
-  /// @brief Compare two mask values.
-  /// @ingroup simd_mask_compare
-  /// @param lhs The left hand operand
-  /// @param rhs the right hand operand
-  /// @return A new mask in which every output mask bit is set to the result of
-  /// the comparison of respective input mask bits.
+
+  /// Compare corresponding mask elements for equality.
   friend constexpr basic_mask operator==(const basic_mask& lhs, const basic_mask& rhs) noexcept
     { return !(lhs ^ rhs); }
+
+  /// Compare corresponding mask elements for inequality.
   friend constexpr basic_mask operator!=(const basic_mask& lhs, const basic_mask& rhs) noexcept
     { return lhs ^ rhs; }
+
+  /// Compare corresponding mask elements using less-than.
   friend constexpr basic_mask operator<(const basic_mask& lhs, const basic_mask& rhs) noexcept
     { return !lhs && rhs; }
+
+  /// Compare corresponding mask elements using less-than-or-equal.
   friend constexpr basic_mask operator<=(const basic_mask& lhs, const basic_mask& rhs) noexcept
     { return !lhs || rhs; }
+
+  /// Compare corresponding mask elements using greater-than.
   friend constexpr basic_mask operator>(const basic_mask& lhs, const basic_mask& rhs) noexcept
     { return lhs && !rhs; }
+
+  /// Compare corresponding mask elements using greater-than-or-equal.
   friend constexpr basic_mask operator>=(const basic_mask& lhs, const basic_mask& rhs) noexcept
     { return lhs || !rhs; }
-  /// @}
 
-  ///@{
-  /// @brief Given two masks, create a new mask which blends respective bits
-  /// from two inputs according to some selector mask. select works like
-  /// (is_bit_set ? a : b) for each element.
-  /// @ingroup simd_mask_cond
+  /// @} cpp26_mask_comparison
+
+  /// @addtogroup cpp26_mask_cond
+  /// @{
+
+  /// @brief Implementation of element-wise selection between two masks.
+  /// @internal
   friend constexpr basic_mask simd_select_impl(const basic_mask& m, const basic_mask& if_true, const basic_mask& if_false) noexcept
     { return detail::select_if_else(target, m, if_true, if_false); }
+
+  /// @brief Implementation of selection between two broadcast boolean values.
+  /// @internal
   friend constexpr basic_mask simd_select_impl(const basic_mask& m, std::same_as<bool> auto if_true, std::same_as<bool> auto if_false) noexcept
     { return detail::select_if_else(target, m, basic_mask(if_true), basic_mask(if_false)); }
+
+  /// @brief Implementation of element-wise vector selection using a mask.
+  /// @internal
   template<vec_type _Tp>
   friend constexpr _Tp simd_select_impl(const basic_mask& m, const _Tp& if_true, const _Tp& if_false) noexcept
   requires (sizeof(_Tp) == _Bytes)
     { return detail::select_if_else(target, m, if_true, if_false); }
-  ///@}
+
+  /// @} cpp26_mask_cond
 
   /// @brief Output the mask to a stream as individual bits.
-  /// @ingroup simd_stream_output
+  /// @ingroup xvec_stream_output
+  /// @param stream The destination stream.
+  /// @param value The mask to output.
+  /// @return The destination stream.
   friend std::ostream &operator<<(std::ostream &stream, const basic_mask& value) {
     stream << value.to_bitset();
     return stream;
   }
 };
 
-/// @brief Return true if every bit in the mask is set. Note that a boolean value is treated as a mask with
-/// a single element.
-/// @ingroup simd_mask_reduce
-/// @param mask The mask to query
-/// @return True if all the bits in the mask are set, false otherwise.
-///@{
+/// @addtogroup cpp26_mask_reductions
+/// @{
+
+/// @brief Return true if every mask element is true.
+/// @param mask The mask to query.
+/// @return True if all elements are true.
 constexpr bool all_of(const mask_type auto& mask) noexcept {
   if (std::is_constant_evaluated())
   {
@@ -321,15 +462,14 @@ constexpr bool all_of(const mask_type auto& mask) noexcept {
     return detail::mask_all_of(target, mask);
 }
 
+/// @brief Apply all_of to one boolean element.
+/// @param b The boolean element.
+/// @return b.
 constexpr bool all_of(std::same_as<bool> auto b) noexcept { return b; }
-///@}
 
-/// @brief Return true if any bit in the mask is set. Note that a boolean value is treated as a mask with
-/// a single element.
-/// @ingroup simd_mask_reduce
-/// @param mask The mask to query
-/// @return True if any bit in the mask is set.
-///@{
+/// @brief Return true if any mask element is true.
+/// @param mask The mask to query.
+/// @return True if at least one element is true.
 constexpr bool any_of(const mask_type auto& mask) noexcept {
   if (std::is_constant_evaluated())
   {
@@ -340,15 +480,14 @@ constexpr bool any_of(const mask_type auto& mask) noexcept {
    return detail::mask_any_of(target, mask);
 }
 
+/// @brief Apply any_of to one boolean element.
+/// @param b The boolean element.
+/// @return b.
 constexpr bool any_of(std::same_as<bool> auto b) noexcept { return b; }
-///@}
 
-/// @brief Return true if no bit in the mask is set. Note that a boolean value is treated as a mask with
-/// a single element.
-/// @ingroup simd_mask_reduce
-/// @param mask The mask to query
-/// @return True if no bit in the mask is set.
-///@{
+/// @brief Return true if no mask element is true.
+/// @param mask The mask to query.
+/// @return True if all elements are false.
 constexpr bool none_of(const mask_type auto& mask) noexcept {
   if (std::is_constant_evaluated())
   {
@@ -359,15 +498,14 @@ constexpr bool none_of(const mask_type auto& mask) noexcept {
     return detail::mask_none_of(target, mask);
 }
 
+/// @brief Apply none_of to one boolean element.
+/// @param b The boolean element.
+/// @return !b.
 constexpr bool none_of(std::same_as<bool> auto b) noexcept { return !b; }
-///@}
 
-/// @brief Return the number of mask bits which are set. Note that a boolean value is treated as a mask with
-/// a single element.
-/// @ingroup simd_mask_reduce
-/// @param mask The mask to query
-/// @return The total count of set bits in the mask input.
-///@{
+/// @brief Count the true mask elements.
+/// @param mask The mask to query.
+/// @return The number of true elements.
 constexpr simd_size_type reduce_count(const mask_type auto& mask) noexcept {
   if (std::is_constant_evaluated())
   {
@@ -379,15 +517,15 @@ constexpr simd_size_type reduce_count(const mask_type auto& mask) noexcept {
     return detail::mask_reduce_count(target, mask);
 }
 
+/// @brief Count one boolean element.
+/// @param b The boolean element.
+/// @return 1 if b is true, or 0 otherwise.
 constexpr simd_size_type reduce_count(std::same_as<bool> auto b) noexcept { return +b; }
-///@}
 
-/// @brief Return the index of the lowest set bit. Note that a boolean value is treated as a mask with
-/// a single element.
-/// @ingroup simd_mask_reduce
-/// @param mask The mask to query
-/// @return The index of the lowest set bit.
-///@{
+/// @brief Return the index of the first true mask element.
+/// @param mask The mask to query.
+/// @pre At least one mask element is true.
+/// @return The lowest selected index.
 constexpr simd_size_type reduce_min_index(const mask_type auto& mask) noexcept {
   if (std::is_constant_evaluated())
   {
@@ -399,15 +537,15 @@ constexpr simd_size_type reduce_min_index(const mask_type auto& mask) noexcept {
     return detail::mask_reduce_min_index(target, mask);
 }
 
+/// @brief Apply reduce_min_index to one boolean element.
+/// @pre The input is true.
+/// @return 0.
 constexpr simd_size_type reduce_min_index(std::same_as<bool> auto) noexcept { return 0; }
-///@}
 
-/// @brief Return the index of the highest set bit. Note that a boolean value is treated as a mask with
-/// a single element.
-/// @ingroup simd_mask_reduce
-/// @param mask The mask to query
-/// @return The index of the highest set bit.
-///@{
+/// @brief Return the index of the last true mask element.
+/// @param mask The mask to query.
+/// @pre At least one mask element is true.
+/// @return The highest selected index.
 constexpr simd_size_type reduce_max_index(const mask_type auto& mask) noexcept {
   if (std::is_constant_evaluated())
   {
@@ -419,13 +557,18 @@ constexpr simd_size_type reduce_max_index(const mask_type auto& mask) noexcept {
     return detail::mask_reduce_max_index(target, mask);
 }
 
+/// @brief Apply reduce_max_index to one boolean element.
+/// @pre The input is true.
+/// @return 0.
 constexpr simd_size_type reduce_max_index(std::same_as<bool> auto) noexcept { return 0; }
-///@}
 
-/// @brief Generate a mask with the bottom N bits set. @tparam _Vp The type of
-/// the mask to generate, which determines the number of bits in the mask.
-/// @param n The number of bits to set in the output mask. If n is bigger than
-/// the number of bits in the mask, all bits will be set.
+/// @} cpp26_mask_reductions
+
+/// @brief Generate a mask with its first n elements set to true.
+/// @ingroup cpp29_p3440
+/// @tparam _Vp The vector type whose mask is returned, or a scalar type for a boolean result.
+/// @param n The number of elements to set. Counts larger than the mask width set every element.
+/// @return A prefix mask for vector types, or n > 0 for scalar types.
 template<typename _Vp>
 constexpr auto mask_from_count(simd_size_type n) noexcept {
   if constexpr (vec_type<_Vp>) {
@@ -437,6 +580,8 @@ constexpr auto mask_from_count(simd_size_type n) noexcept {
 }
 
 // CTAD, to convert a basic_mask into a basic_vec, equivalent to decltype(+mask).
+/// @brief Deduce a vector type from a mask, equivalent to decltype(+k).
+/// @ingroup cpp26_ctor
 template<size_t _Bytes, typename _Abi>
   basic_vec(basic_mask<_Bytes, _Abi> k) ->
     basic_vec<typename basic_mask<_Bytes, _Abi>::traits::element_signed_container_type, _Abi>;

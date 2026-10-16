@@ -129,8 +129,8 @@ _mm512_permutex2var_epi8_emulated(__m512i v_data_0,
   // for that permutation comes from the upper 5-bits of the incoming index (i.e., discard the LSB). The permute
   // instruction masks the index bits itself, so we only need to put the upper 5-bits of the index
   // into the correct location.
-  __v32hi evenPerm = _mm512_permutex2var_epi16(v_data_0, v_shuf_idxs >> 1, v_data_1);
-  __v32hi oddPerm = _mm512_permutex2var_epi16(v_data_0, v_shuf_idxs >> 9, v_data_1);
+  auto evenPerm = _mm512_permutex2var_epi16(v_data_0, v_shuf_idxs >> 1, v_data_1);
+  auto oddPerm = _mm512_permutex2var_epi16(v_data_0, v_shuf_idxs >> 9, v_data_1);
 
   // evenPerm and oddPerm now contain pairs of bytes. We need to select which byte of each pair to use,
   // and that selection is driven by the LSB of each index (i.e., LSB == 0 means use the lower byte of the

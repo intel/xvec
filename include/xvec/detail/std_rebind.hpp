@@ -22,9 +22,6 @@
 // separate entity (see detail/core.hpp); the two agree on simd types.
 namespace _XVEC_NAMESPACE::detail
 {
-/// \defgroup rebind facilities.
-/// @brief rebind_cast implementation, as per P3971R1.
-
 /// Rebind simd vector.
 template<typename _Up, _XVEC_NAMESPACE::simd::vec_type _Vp>
 constexpr _XVEC_NAMESPACE::simd::rebind_t<_Up, _Vp> rebind_cast(const _Vp& v)
@@ -43,6 +40,19 @@ struct RebindCast {
 
 namespace _XVEC_NAMESPACE
 {
+  /**
+   * @defgroup cpp29_p3971 Element-type rebinding
+   * @brief Convert SIMD values to a different element type while preserving their width.
+   *
+   * Proposed in P3971, "std::rebind_cast - Generalised Element-Type Conversion
+   * for Containers and Uniform-Element Types".
+   *
+   * @see https://wg21.link/P3971
+   * @{
+   */
+
   /// Rebinding CPO.
   template<typename _Up> inline constexpr detail::RebindCast<_Up> rebind_cast{};
+
+  /// @} cpp29_p3971
 }

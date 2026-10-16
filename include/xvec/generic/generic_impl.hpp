@@ -34,7 +34,8 @@ inline constexpr simd_size_type uninit_element = 9999124; // No specific value o
 /// to generate all multiples of 3 you can do `iota<T> * 3'. Using the constexpr
 /// nature of iota, along with the constexpr operations and functions makes it
 /// natural to build simd::vec constants with particular properties. Perhaps even
-/// easier than using the generator constructor. @ingroup simd_constructor
+/// easier than using the generator constructor.
+/// @ingroup cpp26_creation
 /// @tparam _Tp The vec or arithmetic type for which to generate the iota sequence
 /// @return A simd::vec or scalar value containing the iota sequence for the type
 template<typename _Tp>
@@ -258,7 +259,7 @@ select_if_else(compact_mask_tag, const _Mp& if_mask, const _Mp& if_true, const _
 /// @param if_true The value to use if the mask bit is set
 /// @param if_false The value to use if the mask bit is clear
 /// @return The selected simd mask
- template<mask_type _Mp>
+template<mask_type _Mp>
 constexpr _Mp
 select_if_else(generic_tag, const _Mp& mask, const _Mp& if_true, const _Mp& if_false) noexcept
 { return _Mp::from_builtin(mask.to_builtin() ? if_true.to_builtin() : if_false.to_builtin()); }
@@ -1144,16 +1145,19 @@ constexpr basic_vec<_Tp, _Abi> mask_to_vec(generic_tag, const basic_mask<_Bytes,
   static_assert(_Value == 1 || _Value == -1, "Only some values are permitted for mask to vec output");
   static_assert(_Bytes == sizeof(_Tp), "Invalid mask or destination - differing sizes");
 
+  using _To = basic_vec<_Tp, _Abi>;
+  using _B = typename _To::builtin_type;
+
   if constexpr (std::integral<_Tp> && _Value == -1)
     // The mask is already entirely 0 or 1 bits, so nothing more to do
-    return basic_vec<_Tp, _Abi>(mask.to_builtin());
+    return _To(_B(mask.to_builtin()));
   else if constexpr (std::integral<_Tp> && _Value == 1)
     // The mask is entirely 0 or 1 bits so a logical shift will convert the MSB into an LSB.
-    return basic_vec<_Tp, _Abi>(mask.to_builtin() >> (sizeof(_Tp) * 8 - 1));
+    return _To(_B(mask.to_builtin() >> (sizeof(_Tp) * 8 - 1)));
   else
   {
-    constexpr auto _vs = basic_vec<_Tp, _Abi>(_Tp(_Value));
-    return select(mask, _vs, basic_vec<_Tp, _Abi>());
+    constexpr auto _vs = _To(_Tp(_Value));
+    return select(mask, _vs, _To());
   }
 }
 
@@ -1359,7 +1363,7 @@ constexpr auto get_n_bit_mask(compact_mask_tag, const _M&, simd_size_type _n)
   if constexpr (_M::size <= 64)
   {
     const auto clamped = std::min(_M::size(), _n);
-    return _M::from_builtin(clamped == 64 ? ~0ULL : (1ULL << clamped) - 1);
+    return _M::from_builtin(typename _M::builtin_type(clamped == 64 ? ~0ULL : (1ULL << clamped) - 1));
   }
   else
     return _M::from_builtin(_M(true).to_builtin() >> (_M::size - std::min(_n, _M::size())));
@@ -1382,13 +1386,13 @@ template<vec_unsigned_integral _Vp>
 constexpr _Vp popcount(generic_tag, const _Vp& x) noexcept
   { return _Vp([=](auto i) -> typename _Vp::value_type { return std::popcount(x[i]); }); }
 
-/// @brief Compute the saturated addition of each respective pair of vec elements
-/// @ingroup simd_numeric
+/// @brief Compute the saturated addition of each respective pair of vector elements.
+/// @internal
 /// @tparam _Tp The integral type of each basic_vec element.
-/// @tparam _Abi The ABI of the basic_vec
-/// @param lhs The first basic_vec value
-/// @param rhs The second basic_vec value
-/// @return A basic_vec value in which each element is the saturating addition of the respective input basic_vec elements.
+/// @tparam _Abi The ABI of the basic_vec.
+/// @param lhs The first basic_vec value.
+/// @param rhs The second basic_vec value.
+/// @return A basic_vec containing the element-wise saturated sums.
 template<std::integral _Tp, typename _Abi>
 constexpr basic_vec<_Tp, _Abi> saturating_add(generic_tag, const basic_vec<_Tp, _Abi>& lhs, const basic_vec<_Tp, _Abi>& rhs) noexcept
 {
@@ -1420,14 +1424,14 @@ constexpr basic_vec<_Tp, _Abi> saturating_add(generic_tag, const basic_vec<_Tp, 
   #endif
 }
 
-/// @brief Compute the saturated subtraction of each respective pair of vec elements
-/// @ingroup simd_numeric
+/// @brief Compute the saturated subtraction of each respective pair of vector elements.
+/// @internal
 /// @tparam _Tp The integral type of each basic_vec element.
-/// @tparam _Abi The ABI of the basic_vec
-/// @param lhs The first basic_vec value
-/// @param rhs The second basic_vec value
-/// @return A basic_vec value in which each element is the saturating subtraction of the respective input basic_vec elements.
-template<std::integral _Tp, typename _Abi>
+/// @tparam _Abi The ABI of the basic_vec.
+/// @param lhs The first basic_vec value.
+/// @param rhs The second basic_vec value.
+/// @return A basic_vec containing the element-wise saturated differences.
+template <std::integral _Tp, typename _Abi>
 constexpr basic_vec<_Tp, _Abi> saturating_sub(generic_tag, const basic_vec<_Tp, _Abi>& lhs, const basic_vec<_Tp, _Abi>& rhs) noexcept
 {
   #if __has_builtin(__builtin_elementwise_sub_sat)

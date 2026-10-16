@@ -221,15 +221,28 @@ namespace detail {
 
 }
 
+/**
+ * @defgroup cpp29_p3067 Named permutation functions
+ * @brief Named permutations and related element-manipulation operations for vectors and masks.
+ *
+ * Groups xvec's named-permutation family with the proposal
+ * "Named permutation functions for std::simd".
+ *
+ * @see https://wg21.link/P3067
+ * @{
+ */
+
 /// Keep the first _Np elements of the input, discarding the remainder. This
 /// is equivalent to shrinking the vec or mask to a new size.
 template<int _Np> constexpr auto take(const vec_or_mask_type auto& in) { return detail::permute_take<_Np>(target, in); }
 
-/// Discard the first _Np elements of the input, discarding the remainder.
+/// Discard the first _Np elements of the input, returning the remainder.
 template<int _Np> constexpr auto drop(const vec_or_mask_type auto& in) { return detail::permute_drop<_Np>(target, in); }
 
 /// Grow the vec or mask input to be N elements.
 template<int _Np> constexpr auto grow(const vec_or_mask_type auto& in) { return detail::permute_grow<_Np>(target, in); }
+
+/// Grow the vec or mask input to be N elements, padding with the supplied value.
 template<int _Np, vec_or_mask_type _Sp> constexpr auto grow(const _Sp& in, const typename _Sp::value_type& fill)
 {
   using _NewType = resize_t<_Np, _Sp>;
@@ -299,10 +312,12 @@ constexpr resize_t<_End - _Begin, _Vp> extract(const _Vp& v) { return detail::ex
 /// @param child The child container.
 /// @return A copy of the original container with its original element values in
 /// the position [_Begin, _Begin + child::size()] replaced by the values from
-/// the child. @{
+/// the child.
 template<simd_size_type _Begin, vec_or_mask_type _Parent, vec_or_mask_type _Child>
 requires (vec_or_mask_same_element_type<_Parent, _Child>)
 constexpr _Parent insert(const _Parent& parent, const _Child& child) noexcept
   { return detail::insert<_Begin>(target, parent, child); }
+
+/// @} cpp29_p3067
 
 } // namespace _XVEC_NAMESPACE::simd
