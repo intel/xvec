@@ -18,21 +18,22 @@
 namespace _XVEC_NAMESPACE::simd
 {
 
-/// \defgroup simd_bit bit header overloads for simd
-/// @brief SIMD versions of functions which appear in C++20 bit header.
+/**
+ * @defgroup cpp26_bit C++26: Bit manipulation
+ * @brief Element-wise bit counting, rotation, power-of-two, and byte-order operations.
+ *
+ * @see https://eel.is/c++draft/simd.bit
+ * @{
+ */
 
-/// @brief Compute the result of rotating each vec element left by a given
-/// offset. Also known as circular shift. Values rotated off the end will appear
-/// at the other end. If the shift value is negative it is equivalent to
-/// shifting right by the negated shift.
-/// @{
-/// @ingroup simd_bit
-/// @tparam _Up The unsigned vec type to rotate.
-/// @tparam _Sp The offset vec type by which to rotate.
-/// @param u The value to rotate
-/// @param s The offset by which to rotate
-/// @return A new simd where every element is the circular shift by s of the
-/// corresponding element of the simd value.
+/// @brief Rotate each unsigned element left by its corresponding offset.
+/// Bits rotated off one end reappear at the other end.
+/// Negative offsets rotate in the opposite direction.
+/// @tparam _Up The unsigned vector type.
+/// @tparam _Sp The integral offset vector type.
+/// @param u The input vector.
+/// @param s The element-wise rotation offsets.
+/// @return A vector containing the rotated elements.
 template<vec_unsigned_integer _Up, vec_integral _Sp>
   requires (_Up::size() == _Sp::size() &&
             sizeof(typename _Up::value_type) == sizeof(typename _Sp::value_type))
@@ -44,24 +45,23 @@ constexpr _Up rotl(const _Up& u, const _Sp& s)
     return detail::rotate_left(target, u, s);
 }
 
+/// @brief Rotate every unsigned element left using a shared offset.
+/// @param u The input vector.
+/// @param s The shared rotation offset.
+/// @return A vector containing the rotated elements.
 template<vec_unsigned_integer _Up, std::integral _Sp>
 constexpr _Up rotl(const _Up& u, _Sp s) {
   using _Rp = std::make_signed_t<typename _Up::value_type>;
   return rotl(u, rebind_t<_Rp, _Up>(_Rp(s))); }
-///@}
 
-///@{
-/// @brief Compute the result of rotating each basic_vec element right by a given
-/// offset. Also known as circular shift. Values rotated off the end will appear
-/// at the other end. If the shift value is negative it is equivalent to
-/// shifting left by the negated shift.
-/// @ingroup simd_bit
-/// @tparam _Up The unsigned vec type to rotate.
-/// @tparam _Sp The offset vec type by which to rotate.
-/// @param u The value to rotate
-/// @param s The offset by which to rotate
-/// @return A new basic_vec where every element is the circular shift by s of the
-/// corresponding element of the basic_vec value.
+/// @brief Rotate each unsigned element right by its corresponding offset.
+/// Bits rotated off one end reappear at the other end.
+/// Negative offsets rotate in the opposite direction.
+/// @tparam _Up The unsigned vector type.
+/// @tparam _Sp The integral offset vector type.
+/// @param u The input vector.
+/// @param s The element-wise rotation offsets.
+/// @return A vector containing the rotated elements.
 template<vec_unsigned_integer _Up, vec_integral _Sp>
   requires (_Up::size() == _Sp::size() &&
             sizeof(typename _Up::value_type) == sizeof(typename _Sp::value_type))
@@ -73,17 +73,19 @@ constexpr _Up rotr(const _Up& u, const _Sp& s)
     return detail::rotate_right(target, u, s);
 }
 
+/// @brief Rotate every unsigned element right using a shared offset.
+/// @param u The input vector.
+/// @param s The shared rotation offset.
+/// @return A vector containing the rotated elements.
 template<vec_unsigned_integer _Up, std::integral _Sp>
 constexpr _Up rotr(const _Up& u, _Sp s) {
   using _Rp = std::make_signed_t<typename _Up::value_type>;
   return rotr(u, rebind_t<_Rp, _Up>(_Rp(s))); }
-/// @}
 
-/// @brief Return the number of consecutive 0 bits in each element starting from the most significant bit.
-/// \ingroup simd_bit
-/// @tparam _Vp The type of the vec input.
-/// @param v The input value
-/// @return A basic_vec containing the number of consecutive 0 bits in each respective element.
+/// @brief Count consecutive zero bits from the most significant bit of each element.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A signed integral vector containing the counts.
 template<vec_unsigned_integer _Vp>
 constexpr auto countl_zero(const _Vp& v) noexcept {
   using _Rp = std::make_signed_t<typename _Vp::value_type>;
@@ -93,18 +95,16 @@ constexpr auto countl_zero(const _Vp& v) noexcept {
     return rebind_t<_Rp, _Vp>(detail::clz(target, v));
 }
 
-/// @brief Return the number of consecutive 1 bits in each element starting from the most significant bit.
-/// \ingroup simd_bit
-/// @tparam _Vp The type of the vec input.
-/// @param x The input value
-/// @return A basic_vec containing the number of consecutive 1 bits in each respective element.
+/// @brief Count consecutive one bits from the most significant bit of each element.
+/// @tparam _Vp The input vector type.
+/// @param x The input vector.
+/// @return A signed integral vector containing the counts.
 template<vec_unsigned_integer _Vp> constexpr auto countl_one(const _Vp& x) noexcept { return countl_zero(~x); }
 
-/// @brief Return the number of consecutive 0 bits in each element starting from the least significant bit.
-/// \ingroup simd_bit
-/// @tparam _Vp The type of the vec input.
-/// @param v The input value
-/// @return A basic_vec containing the number of consecutive 0 bits starting from the LSB in each respective element.
+/// @brief Count consecutive zero bits from the least significant bit of each element.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A signed integral vector containing the counts.
 template<vec_unsigned_integer _Vp>
 constexpr auto countr_zero(const _Vp& v) noexcept {
   using _Rp = std::make_signed_t<typename _Vp::value_type>;
@@ -119,18 +119,16 @@ constexpr auto countr_zero(const _Vp& v) noexcept {
   }
 }
 
-/// @brief Return the number of consecutive 1 bits in each element starting from the least significant bit.
-/// \ingroup simd_bit
-/// @tparam _Vp The type of the vec input.
-/// @param x The input value
-/// @return A basic_vec containing the number of consecutive 1 bits from the LSB in each respective element.
+/// @brief Count consecutive one bits from the least significant bit of each element.
+/// @tparam _Vp The input vector type.
+/// @param x The input vector.
+/// @return A signed integral vector containing the counts.
 template<vec_unsigned_integer _Vp> constexpr auto countr_one(const _Vp& x) noexcept { return countr_zero(~x); }
 
-/// @brief Count the number of 1 bits in each basic_vec element
-// \ingroup simd_bit
-/// @tparam _Vp The type of the vec input.
-/// @param x The input value
-/// @return A basic_vec containing the total number of 1 bits in each respective input element
+/// @brief Count the one bits in each element.
+/// @tparam _Vp The input vector type.
+/// @param x The input vector.
+/// @return A signed integral vector containing the population counts.
 template<vec_unsigned_integer _Vp>
 constexpr auto popcount(const _Vp& x) noexcept {
   using _Rp = std::make_signed_t<typename _Vp::value_type>;
@@ -140,22 +138,19 @@ constexpr auto popcount(const _Vp& x) noexcept {
     return rebind_t<_Rp, _Vp>(detail::popcount(target, x));
 }
 
-/// @brief Check if each element is an integral power-of-2.
-// \ingroup simd_bit
-/// @tparam _Vp The type of the vec input.
-/// @param x The input value
-/// @return A mask where each element is set to true if exactly one bit is used in the
-/// respective element, or false otherwise.
+/// @brief Identify elements that are integral powers of two.
+/// @tparam _Vp The input vector type.
+/// @param x The input vector.
+/// @return A mask that is true where the corresponding element contains exactly one set bit.
 template<vec_unsigned_integer _Vp>
 constexpr typename _Vp::mask_type has_single_bit(const _Vp& x) noexcept {
   return detail::has_single_bit(target, x);
 }
 
-/// @brief Compute the bit width of each element (i.e., how many bits are needed to store the element value).
-// \ingroup simd_bit
-/// @tparam _Vp The type of the vec input.
-/// @param x The input value
-/// @return A signed basic_vec containing the width of each respective element
+/// @brief Compute the number of bits needed to represent each element.
+/// @tparam _Vp The input vector type.
+/// @param x The input vector.
+/// @return A signed integral vector containing the bit widths.
 template<vec_unsigned_integer _Vp>
 constexpr rebind_t<std::make_signed_t<typename _Vp::value_type>, _Vp>
 bit_width(const _Vp& x) noexcept {
@@ -163,12 +158,10 @@ bit_width(const _Vp& x) noexcept {
   return _R(detail::cw<std::numeric_limits<typename _Vp::value_type>::digits> - countl_zero(x));
 }
 
-/// @brief For every element compute the smallest integral power of two that is
-/// not smaller than the element's value.
-// \ingroup simd_bit
-/// @tparam _Vp The type of the vec input.
-/// @param x The input value
-/// @return A signed basic_vec containing the result of std::bit_ceil for that element.
+/// @brief Compute the smallest integral power of two not smaller than each element.
+/// @tparam _Vp The input vector type.
+/// @param x The input vector.
+/// @return An unsigned vector containing the element-wise bit ceilings.
 template<vec_unsigned_integer _Vp>
 constexpr _Vp bit_ceil(const _Vp& x) noexcept {
   if (std::is_constant_evaluated())
@@ -184,11 +177,11 @@ constexpr _Vp bit_ceil(const _Vp& x) noexcept {
   }
 }
 
-/// @brief For every element compute the largest integral power of two that is not greater than the element's value.
-// \ingroup simd_bit
-/// @tparam _Vp The type of the vec input.
-/// @param v The input value
-/// @return A signed basic_vec containing the result of std::bit_floor for that element.
+/// @brief Compute the largest integral power of two not greater than each element.
+/// Zero input elements produce zero output elements.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return An unsigned vector containing the element-wise bit floors.
 template<vec_unsigned_integer _Vp>
 constexpr _Vp bit_floor(const _Vp& v) noexcept {
   using _Tp = typename _Vp::value_type;
@@ -201,11 +194,22 @@ constexpr _Vp bit_floor(const _Vp& v) noexcept {
   }
 }
 
-/// @brief Bit reverse is now part of C++29. It used to be called bitswap in older releases of this library.
-/// \ingroup simd_bit
-/// @tparam _Vp The type of the vec input.
-/// @param x
-/// @return Each element will have its bits reversed.
+/// @} cpp26_bit
+
+/**
+ * @defgroup cpp29_p3772 Bit reversal
+ * @brief Reverse the bits within each vector element.
+ *
+ * Proposed in P3772R0.
+ *
+ * @see https://wg21.link/P3772
+ */
+
+/// @brief Reverse the bits within each element.
+/// @ingroup cpp29_p3772
+/// @tparam _Vp The input vector type.
+/// @param x The input vector.
+/// @return A vector containing the bit-reversed elements.
 template<vec_unsigned_integer _Vp>
 constexpr _Vp bit_reverse(const _Vp& x) noexcept {
   if (std::is_constant_evaluated())
@@ -213,11 +217,11 @@ constexpr _Vp bit_reverse(const _Vp& x) noexcept {
   else
     return detail::bitreverse(target, x); }
 
-/// @brief Reverses the bytes in each integer basic_vec element. Byte swap is part of C++23 but is useful enough to include it before then.
-/// \ingroup simd_bit
-/// @tparam _Vp the type of the vec input.
-/// @param v
-/// @return Each element will have its bytes reversed.
+/// @brief Reverse the bytes within each integral element.
+/// @ingroup cpp26_bit
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A vector containing the byte-reversed elements.
 template<vec_integral _Vp>
 constexpr _Vp byteswap(const _Vp& v) noexcept {
   if (std::is_constant_evaluated())
@@ -234,18 +238,28 @@ constexpr _Vp byteswap(const _Vp& v) noexcept {
   return detail::byteswap(target, v);
 }
 
-///@{
-/// @brief Compute the result of a funnel shift right of two basic_vec values
-/// by a given offset. Conceptually concatenates @p high and @p low into a
-/// value twice as wide, shifts right by @p s, and returns the low N bits.
-/// @ingroup simd_bit
-/// @tparam _Up The unsigned vec type of the values to shift.
-/// @tparam _Sp The offset vec type by which to shift.
-/// @param high The value providing the upper bits of the concatenation.
-/// @param low The value providing the lower bits of the concatenation.
-/// @param s The offset by which to shift. Precondition: 0 <= s[i] < N for all i.
-/// @return A new basic_vec where every element is the funnel shift right of the
-/// corresponding elements of @p high and @p low by the corresponding element of @p s.
+/**
+ * @defgroup cpp29_p4010 Funnel shifts
+ * @brief Shift concatenated pairs of elements and return one element-width result.
+ *
+ * Proposed in P4010.
+ *
+ * @see https://wg21.link/P4010
+ */
+
+/// @addtogroup cpp29_p4010
+/// @{
+
+/// @brief Funnel shift corresponding element pairs right.
+/// Conceptually concatenate each high element with its corresponding low element,
+/// shift right, and return the low N bits, where N is the element bit width.
+/// @tparam _Up The unsigned vector type.
+/// @tparam _Sp The integral shift-count vector type.
+/// @param high The upper elements of the concatenation.
+/// @param low The lower elements of the concatenation.
+/// @param s The element-wise shift counts.
+/// @pre For every element i, 0 <= s[i] < N.
+/// @return A vector containing the funnel-shift results.
 template<vec_unsigned_integer _Up, vec_integral _Sp>
   requires (sizeof(typename _Up::value_type) == sizeof(typename _Sp::value_type))
 constexpr _Up funnel_shift_right(const _Up& high, const _Up& low, const _Sp& s)
@@ -256,23 +270,26 @@ constexpr _Up funnel_shift_right(const _Up& high, const _Up& low, const _Sp& s)
     return detail::fsr(target, high, low, s);
 }
 
+/// @brief Funnel shift every element pair right using a shared shift count.
+/// @param high The upper elements of the concatenation.
+/// @param low The lower elements of the concatenation.
+/// @param s The shared shift count.
+/// @pre 0 <= s < N, where N is the element bit width.
+/// @return A vector containing the funnel-shift results.
 template<vec_unsigned_integer _Up, std::integral _Sp>
 constexpr _Up funnel_shift_right(const _Up& high, const _Up& low, _Sp s)
   { return funnel_shift_right(high, low, _Up(typename _Up::value_type(s))); }
-/// @}
 
-///@{
-/// @brief Compute the result of a funnel shift left of two basic_vec values
-/// by a given offset. Conceptually concatenates @p high and @p low into a
-/// value twice as wide, shifts left by @p s, and returns the high N bits.
-/// @ingroup simd_bit
-/// @tparam _Up The unsigned vec type of the values to shift.
-/// @tparam _Sp The offset vec type by which to shift.
-/// @param high The value providing the upper bits of the concatenation.
-/// @param low The value providing the lower bits of the concatenation.
-/// @param s The offset by which to shift. Precondition: 0 <= s[i] < N for all i.
-/// @return A new basic_vec where every element is the funnel shift left of the
-/// corresponding elements of @p high and @p low by the corresponding element of @p s.
+/// @brief Funnel shift corresponding element pairs left.
+/// Conceptually concatenate each high element with its corresponding low element,
+/// shift left, and return the high N bits, where N is the element bit width.
+/// @tparam _Up The unsigned vector type.
+/// @tparam _Sp The integral shift-count vector type.
+/// @param high The upper elements of the concatenation.
+/// @param low The lower elements of the concatenation.
+/// @param s The element-wise shift counts.
+/// @pre For every element i, 0 <= s[i] < N.
+/// @return A vector containing the funnel-shift results.
 template<vec_unsigned_integer _Up, vec_integral _Sp>
   requires (sizeof(typename _Up::value_type) == sizeof(typename _Sp::value_type))
 constexpr _Up funnel_shift_left(const _Up& high, const _Up& low, const _Sp& s)
@@ -283,10 +300,17 @@ constexpr _Up funnel_shift_left(const _Up& high, const _Up& low, const _Sp& s)
     return detail::fsl(target, high, low, s);
 }
 
+/// @brief Funnel shift every element pair left using a shared shift count.
+/// @param high The upper elements of the concatenation.
+/// @param low The lower elements of the concatenation.
+/// @param s The shared shift count.
+/// @pre 0 <= s < N, where N is the element bit width.
+/// @return A vector containing the funnel-shift results.
 template<vec_unsigned_integer _Up, std::integral _Sp>
 constexpr _Up funnel_shift_left(const _Up& high, const _Up& low, _Sp s)
   { return funnel_shift_left(high, low, _Up(typename _Up::value_type(s))); }
-/// @}
+
+/// @} cpp29_p4010
 
 } // namespace _XVEC_NAMESPACE::simd
 

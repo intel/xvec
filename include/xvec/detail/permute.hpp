@@ -14,9 +14,6 @@
 #include <span>
 #include <cstddef>
 
-/// \defgroup simd_permute Permutation functions for basic_vec
-/// @brief Functions to permute and reorder data in and between basic_vec values.
-
 namespace _XVEC_NAMESPACE::simd {
 
 namespace detail {
@@ -55,8 +52,7 @@ template<vec_type _V> constexpr auto to_container(const _V& v)
   return simd_bit_cast<_C>(v);
 }
 
-/// Concepts to simplify writing the gather/scatter functions.
-///@{
+/// Requirements for the gather interfaces.
 template<typename _Vp, typename _Range, typename _Indexes>
 concept gather_from_requires =
   (std::same_as<_Vp, std::nullptr_t>
@@ -64,18 +60,27 @@ concept gather_from_requires =
        && simd_same_size<_Vp, _Indexes>
        && detail::explicitly_convertible_to<std::ranges::range_value_t<_Range>, typename _Vp::value_type>));
 
+/// Requirements for the scatter interfaces.
 template<typename _Vp, typename _Range, typename _Indexes>
 concept scatter_to_requires =
   (simd_same_size<_Vp, _Indexes> &&
    std::ranges::output_range<_Range, typename _Vp::value_type> &&
    detail::explicitly_convertible_to<typename _Vp::value_type, std::ranges::range_value_t<_Range>>);
-///@}
 
 } // namespace detail
 
+/**
+ * @defgroup cpp26_permute C++26: Permutations
+ * @brief Permute vector and mask elements using generated indexes, index vectors,
+ * selection masks, or indexed memory accesses.
+ *
+ * Includes compression, expansion, gather, and scatter operations.
+ *
+ * @see https://eel.is/c++draft/simd.permute
+ * @{
+ */
+
 /// @brief Permute the elements in a vec value using a generator function to compute the indexing.
-/// @{
-/// @ingroup simd_permute
 /// @tparam _NewSize The number of elements required in the permuted output basic_vec.
 /// @tparam _Vp The type of the basic_vec value to permute
 /// @param v The value to permute
@@ -90,6 +95,12 @@ permute(const _Vp& v, detail::index_generator_function auto&& fn) {
   constexpr auto new_simd_size = detail::new_simd_size<_NewSize, _Vp::size()>;
   return detail::generated_permute<new_simd_size>(target, v, std::forward<decltype(fn)>(fn)); }
 
+/// @brief Permute mask elements using a generator function to compute the indexing.
+/// @tparam _NewSize The number of output elements, or zero to retain the input width.
+/// @tparam _Mask The input mask type.
+/// @param mask The mask to permute.
+/// @param fn The index generator function.
+/// @return The permuted mask.
 template<simd_size_type _NewSize = 0, mask_type _Mask>
 constexpr auto
 permute(const _Mask& mask, detail::index_generator_function auto&& fn) {
@@ -104,7 +115,6 @@ permute(const _Mask& mask, detail::index_generator_function auto&& fn) {
   else
     return detail::generated_permute<new_simd_size>(target, mask, std::forward<decltype(fn)>(fn));
 }
-///@}
 
 /// @brief Permute a vec or mask value by the unsigned integral indexes supplied in another basic_vec value.
 /// @tparam _V The type of the basic_vec or basic_mask value to permute
@@ -126,7 +136,6 @@ constexpr resize_t<_I::size, _V> permute(const _V& v, const _I& indexes)
 /// output. Excess elements will be zeroed. The output basic_vec will have elements
 /// of the same type as the input basic_vec, and the same number of elements as the
 /// input mask.
-/// @{
 /// @tparam _V The vec type
 /// @param v The values to permute
 /// @param selector The mask by which to permute.
@@ -146,6 +155,11 @@ compress(const _V& v, const typename _V::mask_type& selector)
   }
 }
 
+/// @brief Compress selected vector elements and fill the remaining positions.
+/// @param v The input vector.
+/// @param selector The mask selecting elements.
+/// @param fill_value The value used after the packed elements.
+/// @return The compressed vector with the specified padding.
 template<vec_type _V>
 constexpr _V
 compress(const _V& v, const typename _V::mask_type& selector, const typename _V::value_type& fill_value)
@@ -179,7 +193,7 @@ constexpr _M compress(const _M& v, const std::type_identity_t<_M>& selector)
     return detail::compress_mask_by_mask(target, v, selector);
 }
 
-/// Compress one mask using another mask.
+/// Compress one mask using another mask, filling the remaining positions.
 template<mask_type _M>
 constexpr _M compress(const _M& v, const std::type_identity_t<_M>& selector, bool fill_value)
 {
@@ -188,19 +202,13 @@ constexpr _M compress(const _M& v, const std::type_identity_t<_M>& selector, boo
   else
     return detail::compress_mask_by_mask(target, v, selector, fill_value);
 }
-///@}
 
-/// @brief Expand a vec or mask value by a mask. The value returned in an
-/// object in which the first [0..reduce_count(selector)) values are copied to
-/// those output elements whose respective selector elements are set. Any output
-/// elements whose respective selector elements are not set will have the
-/// corresponding element from original copied into that position.
-/// @{
-/// @tparam _V The vec type
-/// @param v The values to permute
-/// @param selector The mask by which to permute.
-/// @param original The value whose elements should be copied to the output in the positions where the corresponding mask bit is clear.
-/// @return The active elements of the vec or mask selected by the mask and packed contiguously into the output.
+/// @brief Expand consecutive input elements into positions selected by a mask.
+/// @tparam _V The vec type.
+/// @param v The vector supplying consecutive input elements.
+/// @param selector The mask selecting output positions.
+/// @param original The values retained at positions where the selector is false.
+/// @return A vector containing expanded elements and retained original values.
 template<vec_type _V>
 constexpr _V
 expand(const _V& v, const typename _V::mask_type& selector, const _V& original = {})
@@ -222,6 +230,10 @@ expand(const _V& v, const typename _V::mask_type& selector, const _V& original =
   }
 }
 
+/// @brief Expand consecutive mask elements into selected output positions.
+/// @param v The mask supplying consecutive input elements.
+/// @param selector The mask selecting output positions.
+/// @param original The values retained at unselected positions.
 template<mask_type _M>
 constexpr _M expand(const _M& v, const std::type_identity_t<_M>& selector, const _M& original = {})
 {
@@ -230,19 +242,16 @@ constexpr _M expand(const _M& v, const std::type_identity_t<_M>& selector, const
   else
     return detail::expand_mask_by_mask(target, v, selector, original);
 }
-///@}
 
 /// @brief Gather the contents of a contiguous range using the integral indexes supplied in another vec value.
 /// @tparam _Vp A deduced type which the caller can override to specify the return type. This allows type conversions.
 /// @tparam _Range The range type from which to read.
 /// @tparam _Indexes The type of the vec indexes used in the gather.
-/// @tparam _Flags Flag type controlling the memory access.
-/// @param r A contiguous range of known size which references a block of data
-/// from which to gather. Only elements inside the range will be accessed. Any
-/// indexes outside the range will return undefined values.
+/// @tparam _Flags Flag types controlling the memory access.
+/// @param r The source range.
 /// @param indexes The indexes from which to gather.
-/// @return A new vec value formed by reading the range from each index element range[idx[iota()]].
-///@{
+/// @param f Flags controlling the memory operation.
+/// @return A new vec value formed by reading the range at the supplied indexes.
 template<typename _Vp = std::nullptr_t, detail::contiguous_sized_range _Range, vec_integral _Indexes, typename... _Flags>
 requires detail::gather_from_requires<_Vp, _Range, _Indexes>
 constexpr auto
@@ -266,6 +275,11 @@ constexpr auto
 unchecked_gather_from(_Range&& r, const _Indexes& indexes, flags<_Flags...> f = {})
   { return partial_gather_from<_Vp>(r, indexes, detail::add_unchecked_flag(f)); }
 
+/// @brief Gather selected elements from a contiguous range.
+/// @param r The source range.
+/// @param mask The mask enabling index-vector elements.
+/// @param indexes The indexes from which to gather.
+/// @param f Flags controlling the memory operation.
 template<typename _Vp = std::nullptr_t, detail::contiguous_sized_range _Range, vec_integral _Indexes, typename... _Flags>
 requires detail::gather_from_requires<_Vp, _Range, _Indexes>
 constexpr auto
@@ -283,7 +297,7 @@ partial_gather_from(_Range&& r, const typename _Indexes::mask_type& mask,
     return _OutSimd(detail::gather_from(target, r, mask, indexes, f));
 }
 
-// Unchecked variant of masked gather_from
+/// Unchecked variant of masked gather_from.
 template<typename _Vp = std::nullptr_t, detail::contiguous_sized_range _Range, vec_integral _Indexes, typename... _Flags>
 requires detail::gather_from_requires<_Vp, _Range, _Indexes>
 constexpr auto
@@ -291,16 +305,14 @@ unchecked_gather_from(_Range&& r, const typename _Indexes::mask_type& mask,
                       const _Indexes& indexes, flags<_Flags...> f = {})
   { return partial_gather_from<_Vp>(r, mask, indexes, detail::add_unchecked_flag(f)); }
 
-///@}
-
 /// @brief Scatter the contents of a basic_vec into memory at the integral index positions supplied in another basic_vec value.
 /// @tparam _Vp The type of the values to scatter to memory.
 /// @tparam _Indexes The type of the indexes used in the scatter.
-/// @tparam _Range The type of the range to which to write.
+/// @tparam _Range The range type to which to write.
 /// @param values The values to scatter to memory.
-/// @param r A contiguous range which references a block of data to which to scatter.
+/// @param r A contiguous range into which to scatter.
 /// @param indexes The indexes to which to scatter.
-/// @{
+/// @param f Flags controlling the memory operation.
 template <detail::contiguous_sized_range _Range, vec_type _Vp, vec_integral _Indexes, typename... _Flags>
 requires detail::scatter_to_requires<_Vp, _Range, _Indexes>
 constexpr void
@@ -314,6 +326,12 @@ partial_scatter_to(const _Vp& values, _Range&& r, const _Indexes& indexes, flags
     detail::scatter_to(target, values, r, indexes, f);
 }
 
+/// @brief Scatter selected vector elements into a contiguous range.
+/// @param values The values to scatter.
+/// @param r The destination range.
+/// @param mask The mask enabling index-vector elements.
+/// @param indexes The indexes to which to scatter.
+/// @param f Flags controlling the memory operation.
 template <detail::contiguous_sized_range  _Range, vec_type _Vp, vec_integral _Indexes, typename... _Flags>
 requires detail::scatter_to_requires<_Vp, _Range, _Indexes>
 constexpr void
@@ -331,18 +349,20 @@ partial_scatter_to(const _Vp& values, _Range&& r, const typename _Indexes::mask_
     detail::scatter_to(target, values, r, mask, indexes, f);
 }
 
+/// Unchecked variant of scatter.
 template <detail::contiguous_sized_range _Range, vec_type _Vp, vec_integral _Indexes, typename... _Flags>
 requires detail::scatter_to_requires<_Vp, _Range, _Indexes>
 constexpr void
 unchecked_scatter_to(const _Vp& values, _Range&& r, const _Indexes& indexes, flags<_Flags...> f = {})
   { partial_scatter_to(values, r, indexes, detail::add_unchecked_flag(f)); }
 
+/// Unchecked variant of masked scatter.
 template <detail::contiguous_sized_range  _Range, vec_type _Vp, vec_integral _Indexes, typename... _Flags>
 requires detail::scatter_to_requires<_Vp, _Range, _Indexes>
 constexpr void
 unchecked_scatter_to(const _Vp& values, _Range&& r, const typename _Indexes::mask_type& mask, const _Indexes& indexes, flags<_Flags...> f = {})
   { partial_scatter_to(values, r, mask, indexes, detail::add_unchecked_flag(f)); }
 
-///@}
+/// @} cpp26_permute
 
 } // namespace _XVEC_NAMESPACE::simd

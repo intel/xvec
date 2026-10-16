@@ -1577,12 +1577,13 @@ constexpr basic_vec<_Tp, _Abi> sqrt(x86_sse_tag, const basic_vec<_Tp, _Abi>& v)
     return chunked_invoke([=](auto v) { return decltype(v)(impl(v)); }, v);
 }
 
-/// @brief Compute the saturated addition of each respective pair of SIMD elements
-/// @ingroup simd_numeric
+/// @brief Compute the saturated addition of each respective pair of vector elements.
+/// @internal
 /// @tparam _Tp The integral type of each basic_vec element.
-/// @tparam _Abi The ABI of the basic_vec
-/// @param v The basic_vec value
-/// @return A basic_vec value in which each element is the saturating addition of the respective input basic_vec elements.
+/// @tparam _Abi The ABI of the basic_vec.
+/// @param lhs The first basic_vec value.
+/// @param rhs The second basic_vec value.
+/// @return A basic_vec containing the element-wise saturated sums.
 template<std::integral _Tp, typename _Abi>
 requires (sizeof(_Tp) <= 2) // x86 only has support for 8 and 16-bit saturating operations. Defer everything else to the
                             // generic synthesised version.
@@ -1622,12 +1623,13 @@ constexpr basic_vec<_Tp, _Abi> saturating_add(x86_tag, const basic_vec<_Tp, _Abi
   return chunked_invoke<numElements>(wrapper, lhs, rhs);
 }
 
-/// @brief Compute the saturated subtraction of each respective pair of SIMD elements
-/// @ingroup simd_numeric
+/// @brief Compute the saturated subtraction of each respective pair of vector elements.
+/// @internal
 /// @tparam _Tp The integral type of each basic_vec element.
-/// @tparam _Abi The ABI of the basic_vec
-/// @param v The basic_vec value
-/// @return A basic_vec value in which each element is the saturating subtraction of the respective input basic_vec elements.
+/// @tparam _Abi The ABI of the basic_vec.
+/// @param lhs The first basic_vec value.
+/// @param rhs The second basic_vec value.
+/// @return A basic_vec containing the element-wise saturated differences.
 template<std::integral _Tp, typename _Abi>
 requires (sizeof(_Tp) <= 2) // x86 only has support for 8 and 16-bit saturating operations. Defer everything else to the
                             // generic synthesised version.
