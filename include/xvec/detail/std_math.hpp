@@ -24,25 +24,40 @@
 namespace _XVEC_NAMESPACE::simd
 {
 
-/// \defgroup simd_math simd C++ math header overloads
-/// @brief Support and overloads for simd versions of C++ functions from the math header.
+/**
+ * @defgroup cpp26_math C++26: Mathematical functions
+ * @brief Element-wise mathematical functions for SIMD vectors.
+ *
+ * @see https://eel.is/c++draft/simd.math
+ */
 
-/// @brief Compute the absolute value of each input vec element. Note that handling abs of an integral is an xvec extension.
-/// @ingroup simd_math
-/// @tparam _Vp The type of the basic_vec.
-/// @param v The vec value
-/// @return A simd vec value in which each element is the absolute value of the respective input vec element.
-///@{
+/**
+ * @defgroup future_math Additional mathematical functions
+ * @brief Additional approximate, fused, integral-classification, and complex operations.
+ *
+ * These are xvec extensions, not a claim of adoption into a future standard.
+ */
+
+/// @addtogroup cpp26_math
+/// @{
+
+/// @brief Compute the absolute value of each floating-point element.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A vector containing the absolute values.
 template<detail::math_floating_point _Vp> constexpr detail::deduced_vec_t<_Vp> abs(const _Vp& v) { return detail::abs(target, v); }
-template<vec_signed_integral _Vp> constexpr _Vp abs(const _Vp& v) { return detail::abs(target, v); }
-///@}
 
-/// @brief Return a value with the magnitude of the first parameter and the sign of the second.
-/// @ingroup simd_math
-/// @tparam _Vp The type of the basic_vec
-/// @param magnitude The magnitude which will be copied to the output
-/// @param sign The sign which will be copied to the output
-/// @return A value with the magnitude of the first parameter and the sign of the second.
+/// @brief Compute the absolute value of each signed-integral element.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A vector containing the absolute values.
+template<vec_signed_integral _Vp> constexpr _Vp abs(const _Vp& v) { return detail::abs(target, v); }
+
+/// @brief Combine corresponding magnitudes and signs.
+/// @tparam _Vp The input vector type.
+/// @param magnitude The vector supplying the magnitudes.
+/// @param sign The vector supplying the signs.
+/// @return A vector with each magnitude from magnitude and each sign from sign.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_vec_t<_Vp> copysign(const _Vp& magnitude, const _Vp& sign)
 {
@@ -56,78 +71,89 @@ constexpr detail::deduced_vec_t<_Vp> copysign(const _Vp& magnitude, const _Vp& s
   return std::bit_cast<_Vp>(tAbs | tSign);
 }
 
-/// @brief Compute the approximate reciprocal of the input.
-/// @ingroup simd_math
-/// @tparam _Vp The type of the basic_vec
-/// @param v The basic_vec value from which to compute the approximate reciprocal.
-/// @return A basic_vec value where every element is the approximate reciprocal of the corresponding input basic_vec element.
+/// @} cpp26_math
+
+/// @addtogroup future_math
+/// @{
+
+/// @brief Compute the approximate reciprocal of each element.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A vector containing approximate reciprocals.
 template<detail::math_floating_point _Vp> constexpr detail::deduced_vec_t<_Vp> rcp (const _Vp& v) { return detail::rcp(target, v); }
 
-/// @brief Compute the approximate reciprocal square-root of the input.
-/// @ingroup simd_math
-/// @tparam _Vp The type of the basic_vec
-/// @param v The vec value from which to compute the approximate reciprocal square root
-/// @return A vec value where every element is the approximate reciprocal
-/// square root of the corresponding input vec element.
+/// @brief Compute the approximate reciprocal square root of each element.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A vector containing approximate reciprocal square roots.
 template<detail::math_floating_point _Vp> constexpr detail::deduced_vec_t<_Vp> rsqrt(const _Vp& v) { return detail::rsqrt(target, v); }
 
-/// @brief Compute the square-root of the input to within 0.5ULP as guaranteed by IEEE floating-point.
-/// @ingroup simd_math
-/// @tparam _Vp The type of the basic_vec.
-/// @param v The basic_vec value from which to compute the square root
-/// @return A basic_vec value where every element is the square root of the corresponding input basic_vec element.
+/// @} future_math
+
+/// @addtogroup cpp26_math
+/// @{
+
+/// @brief Compute the square root of each element.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A vector containing the square roots.
 template<detail::math_floating_point _Vp> constexpr detail::deduced_vec_t<_Vp> sqrt (const _Vp& v) { return detail::sqrt(target, v); }
 
-/// @brief Compute (lhs * rhs) * acc as if to infinite precision, and rounded
-/// only once to fit the result type. The complex overload is an xvec extension.
-/// \ingroup simd_math
-/// \tparam _Vp The type of the basic_vec
-/// \param lhs The left hand value in the multiply.
-/// \param rhs The right hand value in the multiply.
-/// \param acc The accumulator to which the result of the multiply should be added.
-/// \return A new basic_vec value in which each element is formed by applying the fma to each respective element of the inputs.
-///@{
+/// @brief Compute (lhs * rhs) + acc element-wise with a single rounding.
+/// @tparam _Vp The input vector type.
+/// @param lhs The left multiplication operand.
+/// @param rhs The right multiplication operand.
+/// @param acc The value added to the product.
+/// @return A vector containing the fused multiply-add results.
 template<detail::math_floating_point _Vp> constexpr detail::deduced_vec_t<_Vp>
   fma (const _Vp& lhs, const _Vp& rhs, const _Vp& acc) { return detail::fma(target, lhs, rhs, acc); }
 
+/// @} cpp26_math
+
+/// @addtogroup future_math
+/// @{
+
+/// @brief Compute the complex multiply-add operation element-wise.
+/// @tparam _Vp The complex vector type.
+/// @param lhs The left multiplication operand.
+/// @param rhs The right multiplication operand.
+/// @param acc The accumulator.
+/// @return A vector containing the complex multiply-add results.
 template<vec_complex _Vp>
 constexpr _Vp fma (const _Vp& lhs, const _Vp& rhs, const _Vp& acc)
   { return detail::fma(target, lhs, rhs, acc); }
-///@}
 
-/// @brief For all even-indexed elements in the vec, compute (lhs * rhs - acc) and for
-/// all odd-indexed elements compute (lhs * rhs + acc). The expressions are
-/// computed as if to infinite precision, and rounded only once to fit the
-/// result type. This is an xvec extension.
-/// \ingroup simd_math
-/// \tparam _Vp The type of the basic_vec.
-/// \param lhs The left hand value in the multiply.
-/// \param rhs The right hand value in the multiply.
-/// \param acc The accumulator to which the result of the multiply should be alternatively subtracted or added.
-/// \return A new basic_vec value in which each element is formed by applying (lhs * rhs) +- acc to each respective element of the inputs.
+/// @brief Compute lhs * rhs - acc at even indexes and lhs * rhs + acc at odd indexes.
+/// Each expression is computed with a single rounding to the result type.
+/// @tparam _Vp The input vector type.
+/// @param lhs The left multiplication operand.
+/// @param rhs The right multiplication operand.
+/// @param acc The value alternately subtracted or added.
+/// @return A vector containing the alternating fused results.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_vec_t<_Vp> fmaddsub(const _Vp& lhs, const _Vp& rhs, const _Vp& acc)
   { return detail::fmaddsub(target, lhs, rhs, acc); }
 
-/// @brief For all even-indexed elements in the basic_vec compute (lhs * rhs + acc) and for
-/// all odd-indexed elements compute (lhs * rhs - acc). The expressions are
-/// computed as if to infinite precision, and rounded only once to fit the
-/// result type. This is an xvec extension.
-/// \ingroup simd_math
-/// \tparam _Vp The type of the basic_vec
-/// \param lhs The left hand value in the multiply.
-/// \param rhs The right hand value in the multiply.
-/// \param acc The accumulator to which the result of the multiply should be alternatively subtracted or added.
-/// \return A new basic_vec value in which each element is formed by applying (lhs * rhs) +- acc to each respective element of the inputs.
+/// @brief Compute lhs * rhs + acc at even indexes and lhs * rhs - acc at odd indexes.
+/// Each expression is computed with a single rounding to the result type.
+/// @tparam _Vp The input vector type.
+/// @param lhs The left multiplication operand.
+/// @param rhs The right multiplication operand.
+/// @param acc The value alternately added or subtracted.
+/// @return A vector containing the alternating fused results.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_vec_t<_Vp> fmsubadd(const _Vp& lhs, const _Vp& rhs, const _Vp& acc)
   { return detail::fmsubadd(target, lhs, rhs, acc); }
 
-/// @brief For each element compute the smallest integer not less than the given value.
-/// @ingroup simd_math
-/// @tparam _Vp The type of the basic_vec.
-/// @param v The basic_vec value
-/// @return A basic_vec value where each element is the smallest integer not less than the given element value.
+/// @} future_math
+
+/// @addtogroup cpp26_math
+/// @{
+
+/// @brief Round each element toward positive infinity.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A vector containing the rounded values.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_vec_t<_Vp> ceil(const _Vp& v) {
   #if __has_builtin(__builtin_elementwise_ceil)
@@ -137,11 +163,10 @@ constexpr detail::deduced_vec_t<_Vp> ceil(const _Vp& v) {
   #endif
 }
 
-/// @brief For each element compute the largest integer no greater than the given value.
-/// \ingroup simd_math
-/// @tparam _Vp The type of the basic_vec
-/// @param v The vec value
-/// @return A vec value where each element is the largest integer no greater than the given element value.
+/// @brief Round each element toward negative infinity.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A vector containing the rounded values.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_vec_t<_Vp> floor(const _Vp& v)
 {
@@ -152,11 +177,10 @@ constexpr detail::deduced_vec_t<_Vp> floor(const _Vp& v)
   #endif
 }
 
-/// @brief For each element compute the nearest integer not greater than the magnitude of the element value.
-/// \ingroup simd_math
-/// @tparam _Vp The type of the basic_vec
-/// @param v The basic_vec value
-/// @return A basic_vec value where each element is the nearest integer not greater than the magnitude of the input element.
+/// @brief Round each element toward zero.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A vector containing the truncated values.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_vec_t<_Vp> trunc(const _Vp& v) {
   #if __has_builtin(__builtin_elementwise_trunc)
@@ -166,13 +190,10 @@ constexpr detail::deduced_vec_t<_Vp> trunc(const _Vp& v) {
   #endif
 }
 
-/// \ingroup simd_math
-/// @brief For each element compute the nearest integer value using the current rounding mode.
-/// Unlike `round`, this function respects the floating-point environment's current
-/// rounding mode.
-/// @tparam _Vp The type of the basic_vec
-/// @param v The basic_vec value
-/// @return A basic_vec value where each element is the nearest integer using the current rounding mode.
+/// @brief Round each element to an integer using the current rounding mode.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A vector containing the rounded values.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_vec_t<_Vp> rint(const _Vp& v) {
   #if __has_builtin(__builtin_elementwise_rint)
@@ -182,11 +203,10 @@ constexpr detail::deduced_vec_t<_Vp> rint(const _Vp& v) {
   #endif
 }
 
-/// @brief For each element compute the nearest integer value
-/// \ingroup simd_math
-/// @tparam _Vp
-/// @param v The basic_vec value
-/// @return A basic_vec value where each element is the nearest integer.
+/// @brief Round each element to the nearest integer value.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A vector containing the rounded values.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_vec_t<_Vp> round(const _Vp& v) {
   #if __has_builtin(__builtin_elementwise_roundeven)
@@ -196,10 +216,12 @@ constexpr detail::deduced_vec_t<_Vp> round(const _Vp& v) {
   #endif
 }
 
+/// @} cpp26_math
+
 namespace detail
 {
-///@{
-/// Generic implementation of the various classification functions.
+/// Generic implementation of NaN classification.
+/// @internal
 template<math_floating_point _Vp>
 constexpr deduced_mask_t<_Vp> isnan(generic_tag, const _Vp& v)
 {
@@ -215,28 +237,35 @@ constexpr deduced_mask_t<_Vp> isnan(generic_tag, const _Vp& v)
   constexpr auto fractionMask = typename _Vp::traits::element_container_type(fm);
 
   // Check for NaN by using the actual bit-pattern. The exponent must be all
-  // ones, and the fraction all zeros. Checking a NaN against itself is another
+  // ones, and the fraction nonzero. Checking a NaN against itself is another
   // way but is fragile with respect to compiler optimisations.
   const auto asC = vec_as_container(v);
   return ((asC & expMask) == expMask) & ((asC & fractionMask) != uint8_t(0));
 }
 
+/// Generic implementation of infinity classification.
+/// @internal
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_mask_t<_Vp> isinf(generic_tag tag, const _Vp& v)
   { return !isnan(tag, v) && (abs(v) > std::numeric_limits<_Vp>::max()); }
 
+/// Generic implementation of finite-value classification.
+/// @internal
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_mask_t<_Vp> isfinite(generic_tag tag, const _Vp& v)
   { return !(isinf(tag, v) || isnan(tag, v)); }
 
+/// Generic implementation of normal-value classification.
+/// @internal
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_mask_t<_Vp> isnormal(generic_tag, const _Vp& v)
 {
   return (abs(v) >= std::numeric_limits<_Vp>::min()) &&
          (abs(v) <= std::numeric_limits<_Vp>::max());
 }
-///@}
 
+/// Generic implementation of sign-bit classification.
+/// @internal
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_mask_t<_Vp> signbit(generic_tag, const _Vp& v)
 {
@@ -249,65 +278,53 @@ constexpr detail::deduced_mask_t<_Vp> signbit(generic_tag, const _Vp& v)
 
 // namespace detail
 
-/// @brief Compute a mask which indicates which elements in a vec value represent positive or negative infinities.
-/// @ingroup simd_math
-/// @tparam _Vp The type of the basic_vec.
-/// @param v The basic_vec value to query
-/// @return A basic_vec mask where each respective bit of the mask will be set if the
-/// corresponding input element is positive or negative infinity, or cleared
-/// otherwise.
+/// @addtogroup cpp26_math
+/// @{
+
+/// @brief Identify elements representing positive or negative infinity.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A mask whose elements are true for infinite input elements.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_mask_t<_Vp> isinf(const _Vp& v) { return detail::isinf(target, v); }
 
-/// @brief Compute a basic_vec mask which indicates which elements in a basic_vec value represent a not-a-number floating-point value.
-/// @ingroup simd_math
-/// @tparam _Vp The type of the basic_vec.
-/// @param v The basic_vec value to query
-/// @return A mask where each respective bit of the mask will be set if the
-/// corresponding input element is not-a-number, or cleared otherwise.
+/// @brief Identify elements representing NaN.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A mask whose elements are true for NaN input elements.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_mask_t<_Vp> isnan(const _Vp& v) { return detail::isnan(target, v); }
 
-/// @brief Compute a mask which indicates which elements in a vec value represent
-/// finite values. Values which are NaN or infinite will not be finite, and all
-/// other floating-point values will be.
-/// @ingroup simd_math
-/// @tparam _Vp The type of the basic_vec.
-/// @param v The simd value to query
-/// @return A simd mask where each respective bit of the mask will be set if the
-/// corresponding input element is a finite floating-point value or cleared otherwise.
+/// @brief Identify finite elements.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A mask whose elements are true for inputs that are neither infinite nor NaN.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_mask_t<_Vp> isfinite(const _Vp& v) { return detail::isfinite(target, v); }
 
-/// @brief Compute a mask which indicates which elements in a vec value
-/// represents a normal floating point value, which isn't NaN, zero, sub-normal
-/// or infinite.
-/// @ingroup simd_math
-/// @tparam _Vp The type of the basic_vec.
-/// @param v The basic_vec value to query
-/// @return A basic_vec mask where each respective bit of the mask will be set if the
-/// corresponding input element is a normal number or cleared otherwise.
+/// @brief Identify normal floating-point elements.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A mask whose elements are true for normal, nonzero finite inputs.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_mask_t<_Vp> isnormal(const _Vp& v) { return detail::isnormal(target, v); }
 
-/// @brief Compute a basic_vec mask which indicates which elements in a basic_vec value represent a negative value.
-/// @ingroup simd_math
-/// @tparam _Vp The type of the basic_vec.
-/// @param v The basic_vec value to query
-/// @return A mask where each respective bit of the mask will be set if the
-/// corresponding input element is negative, or cleared otherwise.
+/// @brief Identify elements whose sign bit is set.
+/// This includes negative zero and negative values of infinity or NaN.
+/// @tparam _Vp The input vector type.
+/// @param v The input vector.
+/// @return A mask containing the sign-bit state of each input element.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_mask_t<_Vp> signbit(const _Vp& v) {  return detail::signbit(target, v); }
 
-/// @brief Compute a basic_vec mask which indicates which elements in a
-/// basic_vec value represent a negative value. This is an integral version of
-/// the signbit function which doesn't exist in C++26, but is an extension in
-/// xvec.
-/// @ingroup simd_math
-/// @tparam _Vp The type of the basic_vec.
-/// @param v The basic_vec value to query
-/// @return A mask where each respective bit of the mask will be set if the
-/// corresponding input element is negative, or cleared otherwise.
+/// @} cpp26_math
+
+/// @brief Identify negative integral elements.
+/// @ingroup future_math
+/// @tparam _Vp The integral vector type.
+/// @param v The input vector.
+/// @return A mask whose elements are true for negative inputs.
+/// All output elements are false for unsigned input types.
 template<vec_integral _Vp>
 constexpr typename _Vp::mask_type signbit(const _Vp& v) {
   if constexpr (vec_unsigned_integral<_Vp>)
@@ -316,34 +333,50 @@ constexpr typename _Vp::mask_type signbit(const _Vp& v) {
     return v < _Vp(); // Signed integer 
 }
 
-/// @brief Comparison functions which produce a mask result. These are the
-/// quiet (non-signalling) comparison functions from [simd.math]. They are
-/// specified as quiet comparisons (no FE_INVALID raised for unordered
-/// operands), and for NaN operands the corresponding result bit is false. For
-/// this implementation each function is a thin wrapper over the equivalent
-/// relational operator, which already produces a mask and already gives the
-/// correct (false) result for NaN-involving comparisons. Only the all-vector
-/// overload is provided; the mixed scalar/vector overloads from the standard
-/// are not implemented yet.
-///@{
+/// @addtogroup cpp26_math
+/// @{
+
+/// @brief Compare corresponding elements using greater-than.
+/// @param x The left operand.
+/// @param y The right operand.
+/// @return A mask containing the element-wise comparison results.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_mask_t<_Vp> isgreater(const _Vp& x, const _Vp& y) { return x > y; }
 
+/// @brief Compare corresponding elements using greater-than-or-equal.
+/// @param x The left operand.
+/// @param y The right operand.
+/// @return A mask containing the element-wise comparison results.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_mask_t<_Vp> isgreaterequal(const _Vp& x, const _Vp& y) { return x >= y; }
 
+/// @brief Compare corresponding elements using less-than.
+/// @param x The left operand.
+/// @param y The right operand.
+/// @return A mask containing the element-wise comparison results.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_mask_t<_Vp> isless(const _Vp& x, const _Vp& y) { return x < y; }
 
+/// @brief Compare corresponding elements using less-than-or-equal.
+/// @param x The left operand.
+/// @param y The right operand.
+/// @return A mask containing the element-wise comparison results.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_mask_t<_Vp> islessequal(const _Vp& x, const _Vp& y) { return x <= y; }
 
+/// @brief Identify corresponding elements that compare less or greater.
+/// @param x The left operand.
+/// @param y The right operand.
+/// @return A mask that is false for equal or unordered element pairs.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_mask_t<_Vp> islessgreater(const _Vp& x, const _Vp& y) { return (x < y) | (x > y); }
 
+/// @brief Identify unordered element pairs.
+/// @param x The left operand.
+/// @param y The right operand.
+/// @return A mask that is true where either corresponding input is NaN.
 template<detail::math_floating_point _Vp>
 constexpr detail::deduced_mask_t<_Vp> isunordered(const _Vp& x, const _Vp& y) { return isnan(x) | isnan(y); }
-///@}
 
 // Basic
 // :TODO: Move from elsewhere in some cases.
@@ -374,6 +407,8 @@ _XVEC_BINARY_MATHS_OP(pow);
 // Error and gamma (lgamma not supported yet in SVML)
 _XVEC_UNARY_MATHS_OP(erf);
 _XVEC_UNARY_MATHS_OP(erfc);
+
+/// @} cpp26_math
 
 } // namespace _XVEC_NAMESPACE::simd
 

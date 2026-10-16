@@ -34,7 +34,8 @@ inline constexpr simd_size_type uninit_element = 9999124; // No specific value o
 /// to generate all multiples of 3 you can do `iota<T> * 3'. Using the constexpr
 /// nature of iota, along with the constexpr operations and functions makes it
 /// natural to build simd::vec constants with particular properties. Perhaps even
-/// easier than using the generator constructor. @ingroup simd_constructor
+/// easier than using the generator constructor.
+/// @ingroup cpp26_creation
 /// @tparam _Tp The vec or arithmetic type for which to generate the iota sequence
 /// @return A simd::vec or scalar value containing the iota sequence for the type
 template<typename _Tp>
@@ -1385,13 +1386,13 @@ template<vec_unsigned_integral _Vp>
 constexpr _Vp popcount(generic_tag, const _Vp& x) noexcept
   { return _Vp([=](auto i) -> typename _Vp::value_type { return std::popcount(x[i]); }); }
 
-/// @brief Compute the saturated addition of each respective pair of vec elements
-/// @ingroup simd_numeric
+/// @brief Compute the saturated addition of each respective pair of vector elements.
+/// @internal
 /// @tparam _Tp The integral type of each basic_vec element.
-/// @tparam _Abi The ABI of the basic_vec
-/// @param lhs The first basic_vec value
-/// @param rhs The second basic_vec value
-/// @return A basic_vec value in which each element is the saturating addition of the respective input basic_vec elements.
+/// @tparam _Abi The ABI of the basic_vec.
+/// @param lhs The first basic_vec value.
+/// @param rhs The second basic_vec value.
+/// @return A basic_vec containing the element-wise saturated sums.
 template<std::integral _Tp, typename _Abi>
 constexpr basic_vec<_Tp, _Abi> saturating_add(generic_tag, const basic_vec<_Tp, _Abi>& lhs, const basic_vec<_Tp, _Abi>& rhs) noexcept
 {
@@ -1423,14 +1424,14 @@ constexpr basic_vec<_Tp, _Abi> saturating_add(generic_tag, const basic_vec<_Tp, 
   #endif
 }
 
-/// @brief Compute the saturated subtraction of each respective pair of vec elements
-/// @ingroup simd_numeric
+/// @brief Compute the saturated subtraction of each respective pair of vector elements.
+/// @internal
 /// @tparam _Tp The integral type of each basic_vec element.
-/// @tparam _Abi The ABI of the basic_vec
-/// @param lhs The first basic_vec value
-/// @param rhs The second basic_vec value
-/// @return A basic_vec value in which each element is the saturating subtraction of the respective input basic_vec elements.
-template<std::integral _Tp, typename _Abi>
+/// @tparam _Abi The ABI of the basic_vec.
+/// @param lhs The first basic_vec value.
+/// @param rhs The second basic_vec value.
+/// @return A basic_vec containing the element-wise saturated differences.
+template <std::integral _Tp, typename _Abi>
 constexpr basic_vec<_Tp, _Abi> saturating_sub(generic_tag, const basic_vec<_Tp, _Abi>& lhs, const basic_vec<_Tp, _Abi>& rhs) noexcept
 {
   #if __has_builtin(__builtin_elementwise_sub_sat)

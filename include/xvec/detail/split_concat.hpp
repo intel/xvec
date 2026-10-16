@@ -86,14 +86,22 @@ constexpr _Result concatHelper(const _Result& container, const _Sp& head, const 
 
 }
 
+/**
+ * @defgroup cpp26_creation C++26: Vector and mask creation
+ * @brief Split vectors and masks into chunks, or concatenate them into larger values.
+ *
+ * @see https://wg21.link/P3441R2
+ * @{
+ */
+
 /// Chunk the vec_or_mask_type values into a tuple of smaller values, each of which has
 /// no more than N elements. The returned tuple will be a set of (size / N)
 /// full-sized vec or mask values, and one element with (size % N) vec or mask values. If
 /// there are no remainders then an array of equal-sized simd values will be
 /// returned.
-/// @tparam N The size to split into
-/// @param container The svec or mask object to split
-/// @return A tuple of vec or mask values of no more than N elements.
+/// @tparam _Np The size to split into
+/// @param container The vec or mask object to split
+/// @return A tuple or array of vec or mask values of no more than _Np elements.
 template<simd_size_type _Np, vec_or_mask_type _S>
 constexpr auto
 chunk(const _S& container) noexcept {
@@ -107,38 +115,31 @@ chunk(const _S& container) noexcept {
     return r;
 }
 
-/// Chunk the vec or mask type into a tuple of smaller values, each of which has
-/// no more than N elements. The returned tuple will be a set of (size / N)
-/// full-sized values, and one element with (size % N) values. If
-/// there are no remainders then an array of equal-sized values will be
-/// returned.
+/// Chunk the vec into smaller values, each of which has no more than
+/// _V::size elements. An exact partition returns an array; a partition with a
+/// remainder returns a tuple.
 /// @tparam _V The target vector type that determines the chunk size
 /// @tparam _Abi The ABI type of the input vec value
 /// @param s The vec object to split
-/// @return A tuple of vec values of no more than _V::size elements.
-///@{
+/// @return A tuple or array of vec values of no more than _V::size elements.
 template<typename _V, typename _Abi>
 constexpr auto
 chunk(const basic_vec<typename _V::value_type, _Abi>& s) noexcept { return chunk<_V::size>(s); }
 
+/// Chunk the mask into smaller values determined by the target mask width.
 /// @tparam _M The target mask type that determines the chunk size
 /// @tparam _Abi The ABI type of the input mask value
 /// @param m The mask-like object to split
-/// @return A tuple of mask-like values of no more than _M::size elements.
+/// @return A tuple or array of mask-like values of no more than _M::size elements.
 template<mask_type _M, typename _Abi>
 constexpr auto chunk(const basic_mask<simd_mask_element_size_v<_M>, _Abi>& m) noexcept  { return chunk<_M::size>(m); }
-///@}
 
-/// @brief Concatenate several smaller mask values with the same element type into
-/// a single large mask value.
-/// The result is the same size as the sum of the incoming containers.
-/// @brief Concatenate all the specified mask values into a single mask.
-/// @tparam _Tp The element type of the mask
-/// @tparam _Abis Multiple parameter ABIs which specify the size of each incoming mask.
-/// @param masks Multiple masks to concatenate together.
-/// @return A single mask which is the same size as all the incoming
-/// mask values put together, and in which their respective bits are
-/// concatenated together.
+/// @brief Concatenate several smaller mask values with the same element size
+/// into a single large mask value.
+/// @tparam _Bytes The element size represented by each mask
+/// @tparam _Abis Multiple parameter ABIs which specify the size of each incoming mask
+/// @param masks Multiple masks to concatenate together
+/// @return A mask containing all incoming mask elements in argument order.
 template<std::size_t _Bytes, typename... _Abis>
 constexpr auto cat(const basic_mask<_Bytes, _Abis>&... masks) noexcept
 {
@@ -166,5 +167,7 @@ constexpr auto cat(const basic_vec<_Tp, _Abis>&... vecs) noexcept
   constexpr simd_size_type _resultSize = (... + basic_vec<_Tp, _Abis>::size());
   return detail::concatHelper<0>(vec<_Tp, _resultSize>(), vecs...);
 }
+
+/// @} cpp26_creation
 
 } // namespace _XVEC_NAMESPACE::simd

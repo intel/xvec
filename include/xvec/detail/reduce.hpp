@@ -83,10 +83,17 @@ inline _Tp reduce_helper(const basic_vec<_Tp, _Abi>& v, _BinaryFn binop) {
 
 } // End namespace detail
 
+/**
+ * @defgroup cpp26_reductions C++26: Reductions
+ * @brief Reduce vectors to scalar values, with masked and scalar-generic overloads.
+ *
+ * @see https://eel.is/c++draft/simd.reductions
+ * @{
+ */
+
 /// @brief Apply a reduction operation across all elements of the basic_vec value to reduce them to
 /// a single scalar value.
-/// @tparam _Tp The element type of the basic_vec to reduce
-/// @tparam _Abi The ABI of the basic_vec to reduce
+/// @tparam _V The vector type to reduce
 /// @tparam _BinaryFn The type of function to apply
 /// @param v The basic_vec value to reduce into a single element
 /// @param binop The binary operation to use to generate the reduction (defaults to std::plus)
@@ -139,16 +146,17 @@ constexpr _Tp reduce(
         detail::choose_identity_element<_BinaryFn, _Tp>()) noexcept
   { return m ? v : identity_element; }
 
-/// @brief Reduction operators for specific types of pre-defined reduction
-/// @{
-/// @tparam _Tp The element type of the basic_vec.
-/// @tparam _Abi The ABI of the basic_vec
-/// @param v The basic_vec value to reduce
-/// @return A single value of type _Tp representing the reduction.
+/// @brief Return the minimum vector element.
+/// @tparam _V The vector type.
+/// @param v The vector to reduce.
+/// @return The minimum value.
 template<vec_type _V> requires requires (_V x) { min(x, x); }
 constexpr typename _V::value_type reduce_min(const _V& v) noexcept
   { return reduce(v, detail::minBinaryOperator); }
 
+/// @brief Compute the minimum reduction over selected vector elements.
+/// @param v The vector to reduce.
+/// @param m The mask selecting elements.
 template<vec_type _V> requires requires (_V x) { reduce_min(x); }
 constexpr  typename _V::value_type
 reduce_min(const _V& v, const typename _V::mask_type& m) noexcept
@@ -159,9 +167,15 @@ reduce_min(const _V& v, const typename _V::mask_type& m) noexcept
   return reduce_min(r);
 }
 
+/// @brief Return the maximum vector element.
+/// @param v The vector to reduce.
+/// @return The maximum value.
 template<vec_type _V> requires requires (_V x) { max(x, x); }
 constexpr typename _V::value_type reduce_max(const _V& v) noexcept { return reduce(v, detail::maxBinaryOperator); }
 
+/// @brief Compute the maximum reduction over selected vector elements.
+/// @param v The vector to reduce.
+/// @param m The mask selecting elements.
 template<vec_type _V> requires requires (_V x) { reduce_max(x); }
 constexpr typename _V::value_type
 reduce_max(const _V& v, const typename _V::mask_type& m) noexcept
@@ -203,6 +217,7 @@ constexpr _Tp reduce_max(const _Tp& v) noexcept { return v; }
 template<detail::vectorizable _Tp> requires std::totally_ordered<_Tp>
 constexpr _Tp reduce_max(const _Tp& v, std::same_as<bool> auto m) noexcept
   { return m ? v : std::numeric_limits<_Tp>::lowest(); }
-///@}
+
+/// @} cpp26_reductions
 
 } // namespace _XVEC_NAMESPACE::simd

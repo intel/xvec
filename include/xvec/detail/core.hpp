@@ -191,6 +191,7 @@ concept builtin_vectorizable =
   || (complex_number<_Tp> && simple_vectorizable<typename _Tp::value_type>);
 
 /// Trait-based form of vectorization concept.
+/// \ingroup cpp29_p2964
 template<typename _Tp>
 inline constexpr bool disable_vectorization =
     std::is_pointer_v<_Tp> ||
@@ -327,7 +328,6 @@ concept generator_invocable =
     for (bool check : checks) if (!check) return false;
     return true;
   }(std::make_integer_sequence<simd_size_type, _Size>{});
-///@}
 
 template<typename Op>
 concept mask_operator = any_same_v<Op,
@@ -341,6 +341,14 @@ template <class _Tp> using deduced_mask_t = typename deduced_vec_t<_Tp>::mask_ty
 template<class T> concept math_floating_point = vec_floating_point<deduced_vec_t<T>>;
 
 } // namespace detail
+
+/**
+ * @defgroup cpp26_traits C++26: SIMD type traits
+ * @brief Form vector and mask types with different element types or element counts.
+ *
+ * @see https://eel.is/c++draft/simd.traits
+ * @{
+ */
 
 /// Given a simd type (vec or mask), create a new type which has the same size but a different element.
 template<class _Tp, class _Vp> struct rebind {};
@@ -362,12 +370,23 @@ template<simd_size_type _Np, std::size_t _Bytes, class _Abi> struct resize<_Np, 
 };
 template<simd_size_type _Np, class _Vp> using resize_t = typename resize<_Np, _Vp>::type;
 
-/// Shortened aliases for common types.
+/// @} cpp26_traits
+
+/// Shortened alias for a vector type.
+/// @ingroup cpp26_overview
 template<class _Tp, simd_size_type _Np = basic_vec<_Tp>::size()> using vec = basic_vec<_Tp, simd_fixed_size_abi<_Np>>;
+
+/// Shortened alias for a mask type.
+/// @ingroup cpp26_mask_overview
 template<class _Tp, simd_size_type _Np = basic_mask<sizeof(_Tp)>::size()> using mask = basic_mask<sizeof(_Tp), simd_fixed_size_abi<_Np>>;
 
-///@{
-/// flags for controlling the behaviour of simd operations like conversions and memory accesses.
+/**
+ * @defgroup cpp26_flags C++26: Load and store flags
+ * @brief Flags controlling element conversion and memory alignment.
+ *
+ * @see https://eel.is/c++draft/simd.flags
+ * @{
+ */
 
 template <class... _Flags> struct flags {
   template <class... _Others>
@@ -377,6 +396,8 @@ template <class... _Flags> struct flags {
   }
 };
 
+/// @} cpp26_flags
+
 namespace detail {
   class flag_convert {};
   class flag_aligned {};
@@ -384,24 +405,28 @@ namespace detail {
   class flag_unchecked {};
 
   // Add extra flags to the existing flags.
-  ///@{
   constexpr auto add_unchecked_flag(auto f) { return f | flags<flag_unchecked>{}; };
   constexpr auto add_convert_flag(auto f) { return f | flags<flag_convert>{}; };
-  ///@}
 
   /// @brief Query whether the given flags contains the specified type.
   template<typename _F, typename... _Flags>
   constexpr bool contains_flag(flags<_Flags...>) { return (std::is_same_v<_F, _Flags> || ...); }
 }
 
+/// @addtogroup cpp26_flags
+/// @{
+
 /// Standard flags.
-///@{
 inline constexpr flags<> flag_default{};
 inline constexpr flags<detail::flag_convert> flag_convert{};
 inline constexpr flags<detail::flag_aligned> flag_aligned{};
 
 template<size_t _N> requires (std::has_single_bit(_N)) inline constexpr flags<detail::flag_overaligned<_N>> flag_overaligned{};
-///@}
+
+/// @} cpp26_flags
+
+/// @addtogroup cpp29_p2964
+/// @{
 
 /// Conversion flag, used to pass destination type to a simd_convert customisation point.
 template<typename _Tp>
@@ -412,10 +437,13 @@ struct convert_to_t {
 
 template<class _Tp> inline constexpr convert_to_t<_Tp> convert_to{};
 
+/// @} cpp29_p2964
+
 namespace detail
 {
 
 /// Traits for standard builtin vector types.
+/// @internal
 template<typename _Vendor, typename _Tp, simd_size_type _Np>
 struct vec_traits
 {
@@ -490,6 +518,7 @@ struct vec_traits
 };
 
 /// Traits for generic mask types which use a standard vector register to represent the mask.
+/// @internal
 template<typename _Vendor, std::size_t _Bytes, simd_size_type _Np>
 struct mask_traits
 {
