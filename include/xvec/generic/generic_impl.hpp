@@ -982,7 +982,7 @@ constexpr basic_vec<_Tp, _Abi> rotate_right(generic_tag, const basic_vec<_Tp, _A
 template<vec_unsigned_integer _Vp, vec_integral _Sp>
   requires (sizeof(typename _Vp::value_type) == sizeof(typename _Sp::value_type))
 constexpr _Vp fsr(generic_tag, const _Vp& high, const _Vp& low, const _Sp& s) {
-  constexpr uint8_t numBits = sizeof(typename _Vp::value_type) * 8;
+  constexpr std::uint8_t numBits = sizeof(typename _Vp::value_type) * 8;
   const auto sm = _Vp(s) % numBits;
   const _Vp r = (low >> sm) | (high << ((numBits - sm) % numBits));
   return select(sm != _Vp(), r, low);
@@ -991,7 +991,7 @@ constexpr _Vp fsr(generic_tag, const _Vp& high, const _Vp& low, const _Sp& s) {
 template<vec_unsigned_integer _Vp, vec_integral _Sp>
   requires (sizeof(typename _Vp::value_type) == sizeof(typename _Sp::value_type))
 constexpr _Vp fsl(generic_tag, const _Vp& high, const _Vp& low, const _Sp& s) {
-  constexpr uint8_t numBits = sizeof(typename _Vp::value_type) * 8;
+  constexpr std::uint8_t numBits = sizeof(typename _Vp::value_type) * 8;
   const auto sm = _Vp(s) % numBits;
   const _Vp r = (high << sm) | (low >> ((numBits - sm) % numBits));
   return select(sm != _Vp(), r, high);
@@ -1093,7 +1093,7 @@ constexpr basic_vec<_Tp, _Abi> byteswap(_Vendor, const basic_vec<_Tp, _Abi>& x) 
   // elements).
   auto impl = [](auto piece)
   {
-    const auto asBytes = simd_bit_cast<uint8_t>(piece);
+    const auto asBytes = simd_bit_cast<std::uint8_t>(piece);
     const auto rev = permute(asBytes, [](simd_size_type idx) -> simd_size_type { return idx ^ (sizeof(_Tp) - 1); });
     return simd_bit_cast<_Tp>(rev);
   };
@@ -1109,7 +1109,7 @@ template<vec_integral _Vp> // :TODO: Should be unsigned_integral once bitswap is
 constexpr _Vp bitreverse(generic_tag, const _Vp& x) noexcept {
 
   auto doBrev = []<vec_type X>(X bits) {
-    auto asBytes = simd_bit_cast<uint8_t>(bits);
+    auto asBytes = simd_bit_cast<std::uint8_t>(bits);
     using BM = decltype(asBytes);
 
     constexpr BM m1(cw<0x55u>);
@@ -1178,7 +1178,7 @@ constexpr basic_vec<_Tp, _Abi> mask_to_vec(compact_mask_tag, const basic_mask<_B
 /// @internal
 template<typename _Tp, typename _Abi>
 constexpr auto has_single_bit(generic_tag, const basic_vec<_Tp, _Abi>& x) noexcept {
-  return (x != uint8_t(0)) && ((x & (x - uint8_t(1))) == uint8_t(0));
+  return (x != std::uint8_t(0)) && ((x & (x - std::uint8_t(1))) == std::uint8_t(0));
 }
 
 /// @brief Perform a reduction to boolean on a mask value. The functions below are correct but very likely
@@ -1189,7 +1189,7 @@ constexpr auto has_single_bit(generic_tag, const basic_vec<_Tp, _Abi>& x) noexce
 constexpr bool mask_all_of(generic_tag, const mask_type auto& mask) noexcept {
   bool allSet = true; // Assume until otherwise
   auto processBlock = [&]<mask_type _S>(_S m) {
-    constexpr uint64_t allBits = (uint64_t(1) << _S::size) - 1;
+    constexpr std::uint64_t allBits = (std::uint64_t(1) << _S::size) - 1;
     allSet &= (allBits == m.to_ullong());
   };
 
@@ -1207,7 +1207,7 @@ constexpr bool mask_any_of(generic_tag, const mask_type auto& mask) noexcept {
   // really big masks. Note also that it would be more efficient to OR the
   // values together as vecs and call to_ullong at the end, but the
   // compiler (clang/oneAPI) figures this out for itself anyway.
-  uint64_t reducedBits = 0;
+  std::uint64_t reducedBits = 0;
   chunked_invoke([&](auto m) { reducedBits |= m.to_ullong(); }, mask);
   return reducedBits != 0;
 }
@@ -1222,7 +1222,7 @@ constexpr bool mask_none_of(generic_tag, const mask_type auto& mask) noexcept {
   // really big masks. Note also that it would be more efficient to OR the
   // values together as vecs and call to_ullong at the end, but the
   // compiler (clang/oneAPI) figures this out for itself anyway.
-  uint64_t reducedBits = 0;
+  std::uint64_t reducedBits = 0;
   chunked_invoke([&](auto m) { reducedBits |= m.to_ullong(); }, mask);
   return reducedBits == 0;
 }
@@ -1277,13 +1277,13 @@ constexpr simd_size_type mask_reduce_min_index(compact_mask_tag, const _Mp& mask
   // limit of 128 bits anyway, so exploit that to make the code simpler.
   static_assert(_Mp::size <= 128, "This function only handles up to 128 bits");
 
-  auto lowResult = std::countr_zero((uint64_t)mask.to_builtin());
+  auto lowResult = std::countr_zero((std::uint64_t)mask.to_builtin());
 
   if constexpr (_Mp::size <= 64)
     return lowResult;
   else
   {
-    auto highResult = std::countr_zero((uint64_t)(mask.to_builtin() >> 64));
+    auto highResult = std::countr_zero((std::uint64_t)(mask.to_builtin() >> 64));
     if (lowResult < 64) return lowResult;
     else return highResult + 64;
   }
@@ -1315,13 +1315,13 @@ constexpr simd_size_type mask_reduce_max_index(compact_mask_tag, const _Mp& mask
   // limit of 128 bits anyway, so exploit that to make the code simpler.
   static_assert(_Mp::size <= 128, "This function only handles up to 128 bits");
 
-  auto lowResult = 63 - std::countl_zero((uint64_t)mask.to_builtin());
+  auto lowResult = 63 - std::countl_zero((std::uint64_t)mask.to_builtin());
 
   if constexpr (_Mp::size <= 64)
     return lowResult;
   else
   {
-    auto upperBits = (uint64_t)(mask.to_builtin() >> 64);
+    auto upperBits = (std::uint64_t)(mask.to_builtin() >> 64);
     if (upperBits != 0)
       return 127 - std::countl_zero(upperBits);
     else
@@ -1348,7 +1348,7 @@ constexpr auto get_n_bit_mask(generic_tag, const _Mp&, simd_size_type _n) {
     // mask means switching to unsigned bytes. Even then it can only go to 256
     // elements, but for now this will do.
     auto unsignedIota = iota<typename _Mp::traits::unsigned_vec_for_mask>;
-    return unsignedIota < uint8_t(std::min<std::size_t>(_n, 255));
+    return unsignedIota < std::uint8_t(std::min<std::size_t>(_n, 255));
   } else {
     using _X = typename _Mp::traits::signed_vec_for_mask;
     return iota<_X> < (typename _X::value_type)std::min(_n, _Mp::size());
@@ -1550,7 +1550,7 @@ constexpr _Result generate_mask_from_unsigned(compact_mask_tag, std::unsigned_in
 
 template<vec_floating_point _Vp>
 constexpr _Vp rcp(generic_tag, const _Vp& x)
-  { return uint8_t(1) / x; }
+  { return std::uint8_t(1) / x; }
 
 template<vec_floating_point _Vp>
 constexpr _Vp sqrt(generic_tag, const _Vp& x) {
@@ -1563,7 +1563,7 @@ constexpr _Vp sqrt(generic_tag, const _Vp& x) {
 
 template<vec_floating_point _Vp>
 constexpr _Vp rsqrt(generic_tag, const _Vp& x)
-  { return uint8_t(1) / sqrt(x); }
+  { return std::uint8_t(1) / sqrt(x); }
 
 enum class RoundOp{CEIL, FLOOR, TRUNC, ROUND, RINT};
 

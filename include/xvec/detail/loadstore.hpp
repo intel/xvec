@@ -10,6 +10,7 @@
 
 #include <xvec/detail/config.hpp>
 
+#include <cstddef> // std::size_t
 #include <iterator> // std::contiguous_iterator, std::iter_value_t
 
 namespace _XVEC_NAMESPACE::simd
@@ -146,7 +147,7 @@ partial_load(_It first, std::iter_difference_t<_It> n,
 /// @param f Memory-operation flags.
 template<typename _Vp = std::nullptr_t, std::contiguous_iterator _It, std::sized_sentinel_for<_It> _Sent, typename... _Flags>
 constexpr detail::load_return_type_iter<_Vp, _It> partial_load(_It first, _Sent last, flags<_Flags...> f = {})
-  { return partial_load<_Vp>(std::span(first, static_cast<size_t>(last - first)), f); }
+  { return partial_load<_Vp>(std::span(first, static_cast<std::size_t>(last - first)), f); }
 
 /// @brief Masked partial load from an iterator and sized sentinel.
 /// @param first The beginning of the source range.
@@ -156,7 +157,7 @@ constexpr detail::load_return_type_iter<_Vp, _It> partial_load(_It first, _Sent 
 template<typename _Vp = std::nullptr_t, std::contiguous_iterator _It, std::sized_sentinel_for<_It> _Sent, typename... _Flags>
 constexpr detail::load_return_type_iter<_Vp, _It>
 partial_load(_It first, _Sent last, const detail::load_mask_type_iter<_Vp, _It>& m, flags<_Flags...> f = {})
-  { return partial_load<_Vp>(std::span(first, static_cast<size_t>(last - first)), m, f); }
+  { return partial_load<_Vp>(std::span(first, static_cast<std::size_t>(last - first)), m, f); }
 
 /// @brief Unchecked load from a contiguous sized range.
 /// @param r The source range.
@@ -199,7 +200,7 @@ unchecked_load(_It first, std::iter_difference_t<_It> n,
 /// @param f Memory-operation flags.
 template<typename _Vp = std::nullptr_t, std::contiguous_iterator _It, std::sized_sentinel_for<_It> _Sent, typename... _Flags>
 constexpr detail::load_return_type_iter<_Vp, _It> unchecked_load(_It first, _Sent last, flags<_Flags...> f = {})
-  { return partial_load<_Vp>(std::span{first, static_cast<size_t>(last - first)}, detail::add_unchecked_flag(f)); }
+  { return partial_load<_Vp>(std::span{first, static_cast<std::size_t>(last - first)}, detail::add_unchecked_flag(f)); }
 
 /// @brief Masked unchecked load from an iterator and sized sentinel.
 /// @param first The beginning of the source range.
@@ -209,7 +210,7 @@ constexpr detail::load_return_type_iter<_Vp, _It> unchecked_load(_It first, _Sen
 template<typename _Vp = std::nullptr_t, std::contiguous_iterator _It, std::sized_sentinel_for<_It> _Sent, typename... _Flags>
 constexpr detail::load_return_type_iter<_Vp, _It>
 unchecked_load(_It first, _Sent last, const detail::load_mask_type_iter<_Vp, _It>& m, flags<_Flags...> f = {})
-  { return partial_load<_Vp>(std::span(first, static_cast<size_t>(last - first)), m, detail::add_unchecked_flag(f)); }
+  { return partial_load<_Vp>(std::span(first, static_cast<std::size_t>(last - first)), m, detail::add_unchecked_flag(f)); }
 
 /// @brief Store the elements from a basic_vec value into a contiguous range,
 /// performing a suitable conversion if necessary. Both unmasked and masked
@@ -308,7 +309,7 @@ constexpr void partial_store(const basic_vec<_Tp, _Abi>& value, _It first, std::
 template<typename _Tp, typename _Abi, std::contiguous_iterator _It, std::sized_sentinel_for<_It> _Sent, typename... _Flags>
 requires std::indirectly_writable<_It, _Tp>
 constexpr void partial_store(const basic_vec<_Tp, _Abi>& value, _It first, _Sent last, flags<_Flags...> f = {})
-  { partial_store(value, std::span(first, static_cast<size_t>(last - first)), f); }
+  { partial_store(value, std::span(first, static_cast<std::size_t>(last - first)), f); }
 
 /// @brief Masked partial store using an iterator and sized sentinel.
 /// @param value The source vector.
@@ -320,7 +321,7 @@ template<typename _Tp, typename _Abi, std::contiguous_iterator _It, std::sized_s
 requires std::indirectly_writable<_It, _Tp>
 constexpr void partial_store(const basic_vec<_Tp, _Abi>& value, _It first, _Sent last,
                              const typename basic_vec<_Tp, _Abi>::mask_type& m, flags<_Flags...> f = {})
-  { partial_store(value, std::span(first, static_cast<size_t>(last - first)), m, f); }
+  { partial_store(value, std::span(first, static_cast<std::size_t>(last - first)), m, f); }
 
 /// @brief Unchecked store into a contiguous sized range.
 /// @param value The source vector.
@@ -372,7 +373,7 @@ constexpr void unchecked_store(const basic_vec<_Tp, _Abi>& value, _It first, std
 template<typename _Tp, typename _Abi, std::contiguous_iterator _It, std::sized_sentinel_for<_It> _Sent, typename... _Flags>
 requires std::indirectly_writable<_It, _Tp>
 constexpr void unchecked_store(const basic_vec<_Tp, _Abi>& value, _It first, _Sent last, flags<_Flags...> f = {})
-  { partial_store(value, std::span(first, static_cast<size_t>(last - first)), detail::add_unchecked_flag(f)); }
+  { partial_store(value, std::span(first, static_cast<std::size_t>(last - first)), detail::add_unchecked_flag(f)); }
 
 /// @brief Masked unchecked store using an iterator and sized sentinel.
 /// @param value The source vector.
@@ -384,7 +385,7 @@ template<typename _Tp, typename _Abi, std::contiguous_iterator _It, std::sized_s
 requires std::indirectly_writable<_It, _Tp>
 constexpr void unchecked_store(const basic_vec<_Tp, _Abi>& value, _It first, _Sent last,
                                const typename basic_vec<_Tp, _Abi>::mask_type& m, flags<_Flags...> f = {})
-  { partial_store(value, std::span(first, static_cast<size_t>(last - first)), m, detail::add_unchecked_flag(f)); }
+  { partial_store(value, std::span(first, static_cast<std::size_t>(last - first)), m, detail::add_unchecked_flag(f)); }
 
 /// @} cpp26_load_store
 

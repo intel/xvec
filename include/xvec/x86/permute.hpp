@@ -24,8 +24,8 @@ namespace detail
 // It is no great pain then to use pdef, since most of the Intel AVX-512
 // instructions will have that readily available.
 #if defined(__BMI2__)
-inline uint64_t dupBits (uint32_t bits) {
-  auto spreadBits = _pdep_u64(uint64_t(bits), 0x55555555);
+inline std::uint64_t dupBits (std::uint32_t bits) {
+  auto spreadBits = _pdep_u64(std::uint64_t(bits), 0x55555555);
   return spreadBits | (spreadBits << 1);
 }
 #endif
@@ -59,7 +59,7 @@ constexpr auto permute_large_elements(const basic_vec<_Tp, _AbiT>& values, const
   }, indexes);
 
   // Now do the permute again using 64-bit elements with the new indexes.
-  auto r = permute(simd_bit_cast<uint64_t>(values), bigIdxs);
+  auto r = permute(simd_bit_cast<std::uint64_t>(values), bigIdxs);
 
   // Map back to the original 128-bit elements.
   return simd_bit_cast<_Tp>(r);
@@ -76,7 +76,7 @@ constexpr auto permute_byte_shuffle (const basic_vec<_Tp, _AbiT>& v, const basic
   static_assert(basic_vec<_Tp, _AbiT>::size <= 16 && basic_vec<_Ip, _AbiI>::size <= 16, "Data and indexes must fit first lane");
   // :TODO: In future both indexes and values could extend beyond lanes through
   // duplication or multi-lane index merging, which will be faster than using permutex[2]var_epi8.
-  return vec<_Tp, basic_vec<_Ip, _AbiI>::size>(_mm_shuffle_epi8(v.to_register(), (indexes & uint8_t(0xf)).to_register()));
+  return vec<_Tp, basic_vec<_Ip, _AbiI>::size>(_mm_shuffle_epi8(v.to_register(), (indexes & std::uint8_t(0xf)).to_register()));
 }
 
 /// Permute one register of Intel AVX2 values.
@@ -291,7 +291,7 @@ permute(VENDOR tag, const basic_vec<_Tp, _AbiTp>& v, const basic_vec<_Ip, _AbiIp
   {
     // Special case - Intel AVX2 can't permute small element values so bump the size up to
     // something that can be supported.
-    const auto r = permute(rebind_cast<uint32_t>(vc), indexes);
+    const auto r = permute(rebind_cast<std::uint32_t>(vc), indexes);
     const auto resizeBack = rebind_cast<_C>(r);
     return simd_bit_cast<_Tp>(resizeBack);
   }
@@ -341,13 +341,13 @@ constexpr auto
 generated_permute(x86_avx512_tag, const basic_mask<_Bytes, _Abi>& m, _Gp)
 {
 #if defined(__AVX512BMI__)
-  using _I = uint8_t;
+  using _I = std::uint8_t;
 #else
   // Not always a good idea to use 16-bit, as the instruction itself is quite
   // slow, but using 32-bit could lead to multiple registers which is also slow.
   // One special case is when there are fewer bits than a lane has bytes, in
   // which case epi8 could be used instead.
-  using _I = std::conditional_t<basic_mask<_Bytes, _Abi>::size <= 16, uint8_t, uint16_t>;
+  using _I = std::conditional_t<basic_mask<_Bytes, _Abi>::size <= 16, std::uint8_t, std::uint16_t>;
 #endif
 
   using _R = vec<_I, _OutSize>; 
@@ -404,19 +404,19 @@ inline target_overloads compress_one_register {
 #else
     // In the absence of __AVX512VBMI2__ instructions for 8/16-bit, synthesise them by using their 32-bit counterparts.
 
-    []<xmm_register<uint8_t> _Vec>(_Vec v, auto m, auto f) {
+    []<xmm_register<std::uint8_t> _Vec>(_Vec v, auto m, auto f) {
       auto compressed = _mm512_mask_compress_epi32(_mm512_cvtepi8_epi32(f.to_register()),
                                                    m.to_register(),
                                                    _mm512_cvtepi8_epi32(v.to_register()));
       return _Vec(_mm512_cvtepi32_epi8(compressed));
     },
-    []<xmm_register<uint16_t> _Vec>(_Vec v, auto m, auto f) {
+    []<xmm_register<std::uint16_t> _Vec>(_Vec v, auto m, auto f) {
       auto compressed = _mm256_mask_compress_epi32(_mm256_cvtepi16_epi32(f.to_register()),
                                                    m.to_register(),
                                                    _mm256_cvtepi16_epi32(v.to_register()));
       return _Vec(_mm256_cvtepi32_epi16(compressed));
     },
-    []<ymm_register<uint16_t> _Vec>(_Vec v, auto m, auto f) {
+    []<ymm_register<std::uint16_t> _Vec>(_Vec v, auto m, auto f) {
       auto compressed = _mm512_mask_compress_epi32(_mm512_cvtepi16_epi32(f.to_register()),
                                                    m.to_register(),
                                                    _mm512_cvtepi16_epi32(v.to_register()));
@@ -487,7 +487,7 @@ compress_by_mask_snc(const _V& values, const typename _V::mask_type& selector, t
   // indexes, and then use that to permute the input. The output needs to be
   // masked to introduce zeros in unwritten elements.
   constexpr auto indexes = iota<vec<std::uint8_t, _Np>>;
-  const auto compressedIndexes = chunked_invoke(compress_one_register, indexes, mask<uint8_t, _Np>(selector), vec<uint8_t, _Np>());
+  const auto compressedIndexes = chunked_invoke(compress_one_register, indexes, mask<std::uint8_t, _Np>(selector), vec<std::uint8_t, _Np>());
   auto compressed = permute(values, compressedIndexes);
   auto numSetBits = reduce_count(selector);
   auto finalMask = _V::mask_type::__mask_from_count(numSetBits);
@@ -540,7 +540,7 @@ compress_mask_by_mask(x86_avx2_tag, const _M& values, const _M& selector)
   // modify the code below to handle more chunks of data.
   static_assert(_Np <= 128);
 
-  using _R = std::conditional_t<(_Np > 64), __uint128_t, uint64_t>;
+  using _R = std::conditional_t<(_Np > 64), __uint128_t, std::uint64_t>;
 
   // Process up to the first 64 bits.
   constexpr int lowerN = std::min<int>(_Np, 64);
@@ -551,13 +551,13 @@ compress_mask_by_mask(x86_avx2_tag, const _M& values, const _M& selector)
   if constexpr (_Np > 64)
   {
     _R upperCompressed = _pext_u64(drop<64>(values).to_ullong(), drop<64>(selector).to_ullong());
-    resultInt |= (upperCompressed << std::popcount((uint64_t)maskAsUll));
+    resultInt |= (upperCompressed << std::popcount((std::uint64_t)maskAsUll));
   }
 
   // The result is in an integer. Convert that back into a mask.
-  _M resultMask((uint64_t)resultInt);
+  _M resultMask((std::uint64_t)resultInt);
   if constexpr (_Np > 64) {
-    auto upper = resize_t<_Np - 64, _M>(uint64_t(resultInt >> 64));
+    auto upper = resize_t<_Np - 64, _M>(std::uint64_t(resultInt >> 64));
     resultMask = cat(take<64>(resultMask), upper);
   }
 
@@ -580,13 +580,13 @@ compress_mask_by_mask(x86_avx512_tag, const _M& v, const _M& selector)
 
   // Process the first 64 bits.
   using _B = typename _M::builtin_type;
-  _B result = _pext_u64((uint64_t)vd, (uint64_t)md);
+  _B result = _pext_u64((std::uint64_t)vd, (std::uint64_t)md);
 
   // Process the top 64-bits too and then combine them together.
   if constexpr (_Np > 64)
   {
     _B upperCompressed = _pext_u64(vd >> 64, md >> 64);
-    result |= (upperCompressed << std::popcount((uint64_t)md));
+    result |= (upperCompressed << std::popcount((std::uint64_t)md));
   }
 
   return _M::from_builtin(result);
@@ -616,17 +616,17 @@ inline target_overloads expand_one_register {
   // converting to a 4B type, expanding that, and converting back again. For the
   // expand instruction to have only one register to work it must accept no
   // more than 16 elements to start with (i.e., 128 or 256-bits respectively).
-  []<xmm_register<uint8_t> _Vec>(_Vec v, auto m, auto alt) {
+  []<xmm_register<std::uint8_t> _Vec>(_Vec v, auto m, auto alt) {
     auto compressed = _mm512_maskz_expand_epi32(m.to_register(),
                                                 _mm512_cvtepi8_epi32(v.to_register()));
     return _Vec(_mm512_mask_cvtepi32_epi8(alt.to_register(), m.to_register(), compressed));
   },
-  []<xmm_register<uint16_t> _Vec>(_Vec v, auto m, auto alt) {
+  []<xmm_register<std::uint16_t> _Vec>(_Vec v, auto m, auto alt) {
     auto compressed = _mm256_maskz_expand_epi32(m.to_register(),
                                                 _mm256_cvtepi16_epi32(v.to_register()));
     return _Vec(_mm256_mask_cvtepi32_epi16(alt.to_register(), m.to_register(), compressed));
   },
-  []<ymm_register<uint16_t> _Vec>(_Vec v, auto m, auto alt) {
+  []<ymm_register<std::uint16_t> _Vec>(_Vec v, auto m, auto alt) {
     auto compressed = _mm512_maskz_expand_epi32(m.to_register(),
                                                 _mm512_cvtepi16_epi32(v.to_register()));
     return _Vec(_mm512_mask_cvtepi32_epi16(alt.to_register(), m.to_register(), compressed));
@@ -693,7 +693,7 @@ expand_by_mask_snc(const _V& value, const typename _V::mask_type& selector, cons
   // by expanding iota, and then permuting using the indexes.
   // :TODO: The permute should cope better with mixed sizes than it currently does.
   constexpr auto indexes = iota<vec<std::uint8_t, _Np>>;
-  const auto expandedIndexes = chunked_invoke(expand_one_register, indexes, mask<uint8_t, _Np>(selector), vec<uint8_t, _Np>());
+  const auto expandedIndexes = chunked_invoke(expand_one_register, indexes, mask<std::uint8_t, _Np>(selector), vec<std::uint8_t, _Np>());
   auto expanded = permute(value, expandedIndexes);
   return select(selector, expanded, original);
 }
@@ -736,7 +736,7 @@ expand_mask_by_mask(x86_avx_tag, const _M& values, const _M& selector, const _M&
   // modify the code below to handle more chunks of data.
   static_assert(_Np <= 128);
 
-  using _R = std::conditional_t<(_Np > 64), __uint128_t, uint64_t>;
+  using _R = std::conditional_t<(_Np > 64), __uint128_t, std::uint64_t>;
 
   // Process the first 64 bits.
   constexpr int lowerN = std::min<int>(_Np, 64);
@@ -748,16 +748,16 @@ expand_mask_by_mask(x86_avx_tag, const _M& values, const _M& selector, const _M&
   if constexpr (_Np > 64)
   {
     _R upper64Value = drop<64>(values).to_ullong();
-    uint64_t upper64Selector = drop<64>(selector).to_ullong();
+    std::uint64_t upper64Selector = drop<64>(selector).to_ullong();
     auto wholeValue = (upper64Value << 64) | _R(lowerValue);
-    auto bitsToExpand = uint64_t(wholeValue >> std::popcount(lowerSelector));
+    auto bitsToExpand = std::uint64_t(wholeValue >> std::popcount(lowerSelector));
     _R expandedBits = _pdep_u64(bitsToExpand, upper64Selector);
     resultInt |= _R(expandedBits) << 64;
   }
 
-  _M resultMask((uint64_t)resultInt);
+  _M resultMask((std::uint64_t)resultInt);
   if constexpr (_Np > 64)
-    resultMask = cat(take<64>(resultMask), resize_t<_Np - 64, _M>(uint64_t(resultInt >> 64)));
+    resultMask = cat(take<64>(resultMask), resize_t<_Np - 64, _M>(std::uint64_t(resultInt >> 64)));
 
   // Blend in any original bits and return the final result.
   auto final = resultMask.to_builtin() | (original.to_builtin() & ~(selector.to_builtin()));
@@ -778,13 +778,13 @@ expand_mask_by_mask(x86_avx512_tag, const _M& values, const _M& selector, const 
   static_assert(_Np <= 128);
 
   // Process the first 64 bits.
-  typename _M::builtin_type result = _pdep_u64((uint64_t)vd, (uint64_t)sd);
+  typename _M::builtin_type result = _pdep_u64((std::uint64_t)vd, (std::uint64_t)sd);
 
   // // If there are more than 64-bits, process the top 64-bits too and then combine them together.
   if constexpr (_Np > 64)
   {
-    uint64_t useBits = (uint64_t)(vd >> std::popcount((uint64_t)sd));
-    typename _M::builtin_type expandedBits = _pdep_u64(useBits, (uint64_t)(sd >> 64));
+    std::uint64_t useBits = (std::uint64_t)(vd >> std::popcount((std::uint64_t)sd));
+    typename _M::builtin_type expandedBits = _pdep_u64(useBits, (std::uint64_t)(sd >> 64));
     result |= expandedBits << 64;
   }
 
@@ -868,13 +868,13 @@ constexpr auto permute_stride(x86_avx512_tag, const _Mp& in) noexcept {
   // currently 128-bits, which means a stride of 2 will never generate more than
   // 64 bits.
   constexpr auto bits = every_nth_bit<_NewMp, _Np>();
-  uint64_t t = _pext_u64((uint64_t)iv, (uint64_t)bits);
+  std::uint64_t t = _pext_u64((std::uint64_t)iv, (std::uint64_t)bits);
 
   // Handle the upper 64-bits if they are also present.
   if constexpr (_OldSize > 64) {
-    auto upperBits = uint64_t(bits >> 64);
-    uint64_t b = _pext_u64((uint64_t)(iv >> 64), upperBits);
-    t |= b << std::popcount(uint64_t(bits & 0xFFFFFFFFFFFFFFFF));
+    auto upperBits = std::uint64_t(bits >> 64);
+    std::uint64_t b = _pext_u64((std::uint64_t)(iv >> 64), upperBits);
+    t |= b << std::popcount(std::uint64_t(bits & 0xFFFFFFFFFFFFFFFF));
   }
 
   return _NewMp::from_builtin(t);

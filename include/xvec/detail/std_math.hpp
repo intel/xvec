@@ -9,6 +9,7 @@
 #pragma once
 
 #include <concepts>
+#include <cstdint> // std::uint8_t
 #include <limits> // std::numeric_limits
 #include <type_traits>
 
@@ -241,7 +242,7 @@ constexpr deduced_mask_t<_Vp> isnan(generic_tag, const _Vp& v)
   // ones, and the fraction nonzero. Checking a NaN against itself is another
   // way but is fragile with respect to compiler optimisations.
   const auto asC = vec_as_container(v);
-  return ((asC & expMask) == expMask) & ((asC & fractionMask) != uint8_t(0));
+  return ((asC & expMask) == expMask) & ((asC & fractionMask) != std::uint8_t(0));
 }
 
 /// Generic implementation of infinity classification.
@@ -271,7 +272,7 @@ template<detail::math_floating_point _Vp>
 constexpr detail::deduced_mask_t<_Vp> signbit(generic_tag, const _Vp& v)
 {
   constexpr auto signBit = vec_as_container(_Vp(typename _Vp::value_type(-0.0)));
-  auto m = (vec_as_container(v) & signBit) != uint8_t(0);
+  auto m = (vec_as_container(v) & signBit) != std::uint8_t(0);
   return detail::deduced_mask_t<_Vp>(m);
 }
 

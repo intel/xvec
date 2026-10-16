@@ -59,7 +59,7 @@ concept zmm_register = (sizeof(_Vec) > 32 && sizeof(_Vec) <= 64) && (std::same_a
 /// @param b The input byte elements.
 /// @param m The matrix elements.
 /// @return The transformed byte elements.
-template<uint8_t imm_byte = 0, vec_type _Bytes, vec_type _Matrix>
+template<std::uint8_t imm_byte = 0, vec_type _Bytes, vec_type _Matrix>
 requires ((sizeof(typename _Bytes::value_type) == 1) &&
           (sizeof(typename _Matrix::value_type) == 8) &&
           ((_Matrix::size() * 8) == _Bytes::size()))
@@ -79,7 +79,7 @@ inline _Bytes gf2p8affine(const _Bytes& b, const _Matrix& m)
   };
 
   return std::bit_cast<_Bytes>(chunked_invoke([=](auto x, auto y) { return decltype(x)(impl(x, y)); }, 
-                                              simd_bit_cast<uint8_t>(b), simd_bit_cast<uint8_t>(m)));
+                                              simd_bit_cast<std::uint8_t>(b), simd_bit_cast<std::uint8_t>(m)));
 }
 
 /// This variant of the GFNI affine instruction provides an easy way of
@@ -90,13 +90,13 @@ inline _Bytes gf2p8affine(const _Bytes& b, const _Matrix& m)
 /// @param b The input byte elements.
 /// @param m The shared matrix.
 /// @return The transformed byte elements.
-template<uint8_t imm_byte = 0, vec_type _Bytes>
+template<std::uint8_t imm_byte = 0, vec_type _Bytes>
 requires (sizeof(typename _Bytes::value_type) == 1) // Allow any type of single byte element to be transformed.
-inline _Bytes gf2p8affine(const _Bytes& b, uint64_t m)
+inline _Bytes gf2p8affine(const _Bytes& b, std::uint64_t m)
 {
   constexpr int roundedTo8 = ((_Bytes::size() + 7) / 8) * 8;
   auto resizeTo8 = permute<roundedTo8>(b, detail::perm_uninitResize);
-  auto r = gf2p8affine<imm_byte>(resizeTo8, vec<uint64_t, roundedTo8 / 8>(m));
+  auto r = gf2p8affine<imm_byte>(resizeTo8, vec<std::uint64_t, roundedTo8 / 8>(m));
   return take<(int)_Bytes::size()>(r);
 }
 

@@ -402,7 +402,7 @@ template <class... _Flags> struct flags {
 namespace detail {
   class flag_convert {};
   class flag_aligned {};
-  template<size_t _N> class flag_overaligned {};
+  template<std::size_t _N> class flag_overaligned {};
   class flag_unchecked {};
 
   // Add extra flags to the existing flags.
@@ -422,7 +422,7 @@ inline constexpr flags<> flag_default{};
 inline constexpr flags<detail::flag_convert> flag_convert{};
 inline constexpr flags<detail::flag_aligned> flag_aligned{};
 
-template<size_t _N> requires (std::has_single_bit(_N)) inline constexpr flags<detail::flag_overaligned<_N>> flag_overaligned{};
+template<std::size_t _N> requires (std::has_single_bit(_N)) inline constexpr flags<detail::flag_overaligned<_N>> flag_overaligned{};
 
 /// @} cpp26_flags
 
@@ -454,7 +454,7 @@ struct vec_traits
   static constexpr simd_size_type _numDataElements = complex_number<_Tp> ? 2 * _Np : _Np;
 
   /// The number of storage elements. This could be bigger than the number of data elements.
-  static constexpr simd_size_type _numStorageElements = isLlvm ? _numDataElements : std::bit_ceil((uint64_t)_numDataElements);
+  static constexpr simd_size_type _numStorageElements = isLlvm ? _numDataElements : std::bit_ceil((std::uint64_t)_numDataElements);
 
   /// The bare storage type used by the compiler for the elements. For
   /// arithmetic types this will typically be the same as the type itself, but

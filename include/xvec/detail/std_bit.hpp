@@ -171,9 +171,9 @@ constexpr _Vp bit_ceil(const _Vp& x) noexcept {
     // Normally bit_ceil would need to be wary of shifts, since some types get
     // promoted and would give the wrong result. This is't a problem for SIMD
     // operations since promotion doesn't occur.
-    constexpr auto one = _Vp(uint8_t(1));
+    constexpr auto one = _Vp(std::uint8_t(1));
     auto shift_amount = _Vp(bit_width(x - one));
-    return select(x < uint8_t(2), one, one << shift_amount);
+    return select(x < std::uint8_t(2), one, one << shift_amount);
   }
 }
 
@@ -190,7 +190,7 @@ constexpr _Vp bit_floor(const _Vp& v) noexcept {
   else
   {
     auto log2 = rebind_cast<_Tp>(detail::cw<std::numeric_limits<_Tp>::digits - 1> - countl_zero(v));
-    return select(v != _Vp(), uint8_t(1) << log2, _Vp());
+    return select(v != _Vp(), std::uint8_t(1) << log2, _Vp());
   }
 }
 
