@@ -63,7 +63,7 @@ constexpr auto builtin_operator(generic_tag, _Vp lhs, _Vp rhs, _Op op) {
   r = op(lhsd, rhsd);
 #endif
 
-  if constexpr (mask_operator<_Op>) return _Vp::mask_type::from_builtin(r);
+  if constexpr (mask_operator<_Op>) return typename _Vp::mask_type(typename _Vp::mask_type::builtin_type(r));
   else return _Vp::from_builtin(r);
 }
 

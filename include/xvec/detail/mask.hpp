@@ -91,6 +91,13 @@ public:
   constexpr basic_mask& operator=(const basic_mask&) = default;
   constexpr basic_mask& operator=(basic_mask&&) noexcept = default;
 
+  /// Allow a mask to be constructed from the compiler's own representation. The
+  /// compiler may use multiple or partial target registers in its
+  /// representation. This constructor allows a mask to be built from the output
+  /// of an overloaded operator, a builtin, and so on.
+  /// @ingroup simd_constructor
+  constexpr basic_mask(const builtin_type& m) noexcept : mask(m) {}
+
   /// @brief Build a mask from a boolean value.
   /// @param b The boolean value to broadcast to all mask elements.
   constexpr explicit basic_mask(std::same_as<value_type> auto b) noexcept :
@@ -183,7 +190,7 @@ public:
   /// be a type which can be used for a standard constructor (e.g.,
   /// integral-like) so the `from_builtin` ensures that the desired effect is
   /// achieved directly.
-  static constexpr basic_mask from_builtin(const auto& m) { basic_mask bm; bm.mask = traits::truncate_to_size(m); return bm; }
+  static constexpr basic_mask from_builtin(const builtin_type& m) { basic_mask bm; bm.mask = traits::truncate_to_size(m); return bm; }
 
   /// Convert the mask into a register which can be passed to an intrinsic.
   constexpr auto to_register() const noexcept { return traits::to_register(mask); }
