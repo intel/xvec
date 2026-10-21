@@ -183,7 +183,7 @@ public:
   /// be a type which can be used for a standard constructor (e.g.,
   /// integral-like) so the `from_builtin` ensures that the desired effect is
   /// achieved directly.
-  static constexpr basic_mask from_builtin(const auto& m) { basic_mask bm; bm.mask = traits::truncate_to_size(m); return bm; }
+  static constexpr basic_mask from_builtin(const builtin_type& m) { basic_mask bm; bm.mask = traits::truncate_to_size(m); return bm; }
 
   /// Convert the mask into a register which can be passed to an intrinsic.
   constexpr auto to_register() const noexcept { return traits::to_register(mask); }
