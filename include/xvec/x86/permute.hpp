@@ -89,7 +89,7 @@ inline auto permute_x86_register(x86_avx2_tag, const basic_vec<_Tp, _AbiT>& v, c
   // same size. There is no advantage to using 128-bit permute instructions.
   const auto _rv = permute<vec<_Tp>::size()>(v, perm_uninitResize);
 
-  auto impl = [_rv]<typename _ImplT>(_ImplT i) -> _ImplT {
+  auto impl = [_rv]<typename _ImplT>(_ImplT i) {
     auto block = permute<vec<_Tp>::size>(i, perm_uninitResize); // Bump to whole register
 
     auto r = [=]{
