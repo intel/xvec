@@ -159,7 +159,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BySmallIndex, TypeParam, PermuteTestTypes)
   {
     using UnsignedIndexSimd = xvec::simd::vec<unsigned short, 5>;
     const auto unsignedIndexes = GetRandomVector<UnsignedIndexSimd>(TypeParam::size() - 1);
-    const auto signedIndexes = xvec::rebind_cast<signed short>(unsignedIndexes);
+    const auto signedIndexes1 = xvec::rebind_cast<signed short>(unsignedIndexes);
+    const auto signedIndexes2 = xvec::rebind_cast<signed int>(unsignedIndexes);
 
     std::array<typename TypeParam::value_type, 5> expected{};
     for (std::size_t i = 0; i < expected.size(); ++i)
@@ -168,13 +169,13 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BySmallIndex, TypeParam, PermuteTestTypes)
     const auto computedOptionUnsignedA = permute(f.v0, unsignedIndexes);
     BOOST_TEST(to_array(computedOptionUnsignedA) == expected, boost::test_tools::per_element());
 
-    const auto computedOptionSignedA = permute(f.v0, signedIndexes);
+    const auto computedOptionSignedA = permute(f.v0, signedIndexes1);
     BOOST_TEST(to_array(computedOptionSignedA) == expected, boost::test_tools::per_element());
 
     const auto computedOptionUnsignedB = f.v0[unsignedIndexes];
     BOOST_TEST(to_array(computedOptionUnsignedB) == expected, boost::test_tools::per_element());
 
-    const auto computedOptionSignedB = f.v0[signedIndexes];
+    const auto computedOptionSignedB = f.v0[signedIndexes2];
     BOOST_TEST(to_array(computedOptionSignedB) == expected, boost::test_tools::per_element());
 
 #if defined(_XVEC_HAS_CONSTEXPR)
