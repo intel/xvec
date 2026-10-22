@@ -18,29 +18,47 @@
 
 namespace _XVEC_NAMESPACE::simd::x86 {
 
-/// Concepts for detecting vectors which fit into specific sizes of registers.
-///@{
+/**
+ * @defgroup x86_intrin x86 intrinsic interfaces
+ * @brief Register-size concepts and SIMD wrappers for x86-specific operations.
+ * @{
+ */
+
+/// @brief Detect a vector occupying at most an xmm-sized register.
+/// @tparam _Vec The vector type.
+/// @tparam _Tp The required element type.
 template<typename _Vec, typename _Tp = typename _Vec::value_type>
 concept xmm_register = (sizeof(_Vec) <= 16) && (std::same_as<_Tp, typename _Vec::value_type>);
 
+/// @brief Detect a vector larger than xmm and no larger than ymm.
+/// @tparam _Vec The vector type.
+/// @tparam _Tp The required element type.
 template<typename _Vec, typename _Tp = typename _Vec::value_type>
 concept ymm_register = (sizeof(_Vec) > 16 && sizeof(_Vec) <= 32) && (std::same_as<_Tp, typename _Vec::value_type>);
 
+/// @brief Detect a vector larger than ymm and no larger than zmm.
+/// @tparam _Vec The vector type.
+/// @tparam _Tp The required element type.
 template<typename _Vec, typename _Tp = typename _Vec::value_type>
 concept zmm_register = (sizeof(_Vec) > 32 && sizeof(_Vec) <= 64) && (std::same_as<_Tp, typename _Vec::value_type>);
-///@}
 
 #if defined(__GFNI__)
 /// Compute an affine transformation in the Galois Field 2^8. An affine
 /// transformation is defined by A * x + b, where A represents an 8 by 8 bit
 /// matrix, x represents an 8-bit vector, and b is a constant immediate byte.
-
+///
 /// This function call wraps a call directly to the underlying GFNI instruction
 /// using 64-bit elements throughout. It allows the underlying GFNI instruction
 /// to be used in any way that the hardware supports. It requires 8 bytes to be
 /// supplied for every 8x8 matrix element. It allows arbitrary numbers of
 /// byte/matrix groups, and will call the intrinsic as many times as needed for
 /// all the groups.
+/// @tparam imm_byte The constant byte added by the affine transformation.
+/// @tparam _Bytes The vector type containing byte elements.
+/// @tparam _Matrix The vector type containing 64-bit matrix elements.
+/// @param b The input byte elements.
+/// @param m The matrix elements.
+/// @return The transformed byte elements.
 template<uint8_t imm_byte = 0, vec_type _Bytes, vec_type _Matrix>
 requires ((sizeof(typename _Bytes::value_type) == 1) &&
           (sizeof(typename _Matrix::value_type) == 8) &&
@@ -67,6 +85,11 @@ inline _Bytes gf2p8affine(const _Bytes& b, const _Matrix& m)
 /// This variant of the GFNI affine instruction provides an easy way of
 /// accessing the most common use case, where every input byte element is
 /// multiplied by a single 8x8 bit matrix.
+/// @tparam imm_byte The constant byte added by the affine transformation.
+/// @tparam _Bytes The vector type containing byte elements.
+/// @param b The input byte elements.
+/// @param m The shared matrix.
+/// @return The transformed byte elements.
 template<uint8_t imm_byte = 0, vec_type _Bytes>
 requires (sizeof(typename _Bytes::value_type) == 1) // Allow any type of single byte element to be transformed.
 inline _Bytes gf2p8affine(const _Bytes& b, uint64_t m)
@@ -80,6 +103,8 @@ inline _Bytes gf2p8affine(const _Bytes& b, uint64_t m)
 #else
 inline auto gf2p8affine(auto unhandled, auto); // Does nothing for other platforms to allow link-time detection.
 #endif
+
+/// @} x86_intrin
 
 } // End of simd::x86 namespace
 

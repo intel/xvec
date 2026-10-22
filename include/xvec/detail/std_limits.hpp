@@ -20,6 +20,21 @@ namespace std
 
 using _XVEC_NAMESPACE::simd::basic_vec;
 
+/**
+ * @defgroup cpp29_p4209 Vector numeric limits
+ * @brief Numeric properties and broadcast limit values for SIMD vectors.
+ *
+ * Described in P4209, "std::numeric_limits for std::basic_vec".
+ *
+ * @see https://github.com/danieltowner/std_simd_external_collaboration/blob/18937a79b53cc23c169a335aa493dcaddd71a638/P4209/P4209.bs
+ * @{
+ */
+
+/// @brief Extend numeric_limits to vectors whose element type has specialized numeric limits.
+/// @tparam _Tp The vector element type.
+/// @tparam _Abi The vector ABI.
+/// @details Value-returning members broadcast the corresponding scalar limit.
+/// Trait members describe the element type.
 template <typename _Tp, typename _Abi>
   requires numeric_limits<_Tp>::is_specialized
 struct numeric_limits<basic_vec<_Tp, _Abi>> {
@@ -31,7 +46,8 @@ public:
 
     static constexpr bool is_specialized = true;
 
-    // Value-returning members: broadcast the scalar limit.
+    /// Value-returning members: broadcast the scalar limit.
+    ///@{
     static constexpr V min()           noexcept { return V(NL::min()); }
     static constexpr V max()           noexcept { return V(NL::max()); }
     static constexpr V lowest()        noexcept { return V(NL::lowest()); }
@@ -41,8 +57,10 @@ public:
     static constexpr V quiet_NaN()     noexcept { return V(NL::quiet_NaN()); }
     static constexpr V signaling_NaN() noexcept { return V(NL::signaling_NaN()); }
     static constexpr V denorm_min()    noexcept { return V(NL::denorm_min()); }
+    ///@}
 
-    // Trait members: forward unchanged from numeric_limits<T>.
+    /// Trait members: forward unchanged from numeric_limits<T>.
+    ///@{
     static constexpr int  digits         = NL::digits;
     static constexpr int  digits10       = NL::digits10;
     static constexpr int  max_digits10   = NL::max_digits10;
@@ -66,6 +84,9 @@ public:
     static constexpr bool              traps           = NL::traps;
     static constexpr bool              tinyness_before = NL::tinyness_before;
     static constexpr float_round_style round_style     = NL::round_style;
+    ///@}
 };
+
+/// @} cpp29_p4209
 
 } // namespace std
