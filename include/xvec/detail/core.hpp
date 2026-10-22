@@ -11,6 +11,7 @@
 #include <bitset>
 #include <concepts>     // std::same_as, std::convertible_to, std::integral, ...
 #include <cstddef>      // std::size_t
+#include <cstdint>      // std::uint64_t
 #include <cstring>      // std::memcpy
 #include <algorithm>    // std::min, std::max
 #include <bit>          // std::has_single_bit, std::bit_ceil

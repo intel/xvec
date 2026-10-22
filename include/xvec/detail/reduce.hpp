@@ -10,7 +10,9 @@
 
 #include <xvec/detail/config.hpp>
 
+#include <bit> // std::bit_ceil
 #include <cstddef>
+#include <cstdint> // std::uint64_t
 #include <limits> // std::numeric_limits
 
 namespace _XVEC_NAMESPACE::simd
