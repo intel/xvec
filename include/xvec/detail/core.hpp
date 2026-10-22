@@ -328,6 +328,7 @@ concept generator_invocable =
     for (bool check : checks) if (!check) return false;
     return true;
   }(std::make_integer_sequence<simd_size_type, _Size>{});
+///@}
 
 template<typename Op>
 concept mask_operator = any_same_v<Op,

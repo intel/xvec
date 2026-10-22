@@ -16,13 +16,8 @@
 namespace _XVEC_NAMESPACE::simd
 {
 
-/**
- * @defgroup cpp29_p2964 SIMD support for enumerations and std::byte
- * @brief Facilities associated with the additional element types proposed in P2964.
- *
- * @see https://wg21.link/P2964
- * @{
- */
+/// @addtogroup cpp29_p2964
+/// @{
 
 /// @brief Convert each enumeration element to its underlying type.
 /// @tparam _Tp The enumeration type.

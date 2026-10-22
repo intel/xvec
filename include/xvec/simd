@@ -138,7 +138,6 @@ namespace _XVEC_NAMESPACE::simd
  * Includes conversion of enumeration and byte vectors to integral vectors.
  *
  * @see https://wg21.link/P2964
- * @{
  */
 
 /**

@@ -1073,7 +1073,7 @@ FILE_PATTERNS          = *.hpp
 # be searched for input files as well.
 # The default value is: NO.
 
-RECURSIVE              = NO
+RECURSIVE              = YES
 
 # The EXCLUDE tag can be used to specify files and/or directories that should be
 # excluded from the INPUT source files. This way you can easily exclude a
@@ -2532,7 +2532,8 @@ INCLUDE_FILE_PATTERNS  =
 # recursively expanded use the := operator instead of the = operator.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-PREDEFINED             =
+PREDEFINED             = "_XVEC_UNARY_MATHS_OP(NAME)=template<detail::math_floating_point _Vp> constexpr detail::deduced_vec_t<_Vp> NAME(const _Vp& v)" \
+                         "_XVEC_BINARY_MATHS_OP(NAME)=template<detail::math_floating_point _Vp> constexpr auto NAME(const _Vp& v0, const _Vp& v1)"
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
 # tag can be used to specify a list of macro names that should be expanded. The
