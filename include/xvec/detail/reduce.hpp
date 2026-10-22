@@ -10,7 +10,9 @@
 
 #include <xvec/detail/config.hpp>
 
+#include <bit> // std::bit_ceil
 #include <cstddef>
+#include <cstdint> // std::uint64_t
 #include <limits> // std::numeric_limits
 
 namespace _XVEC_NAMESPACE::simd
@@ -59,7 +61,7 @@ inline _Tp reduce_helper(const basic_vec<_Tp, _Abi>& v, _BinaryFn binop) {
     // register. It is better to handle anything small as a complete register,
     //     rather than extracting and inserting sub-register pieces in the final
     // stages of the reduction.
-    constexpr int halfSize = std::bit_ceil((uint64_t)_Size) / 2;
+    constexpr int halfSize = std::bit_ceil((std::uint64_t)_Size) / 2;
     constexpr auto opSize = std::max(register_size<_Tp, 1>, halfSize);
 
     const auto lower = permute<opSize>(v, perm_uninitResize);

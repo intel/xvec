@@ -575,7 +575,7 @@ constexpr auto mask_from_count(simd_size_type n) noexcept {
 // CTAD, to convert a basic_mask into a basic_vec, equivalent to decltype(+mask).
 /// @brief Deduce a vector type from a mask, equivalent to decltype(+k).
 /// @ingroup cpp26_ctor
-template<size_t _Bytes, typename _Abi>
+template<std::size_t _Bytes, typename _Abi>
   basic_vec(basic_mask<_Bytes, _Abi> k) ->
     basic_vec<typename basic_mask<_Bytes, _Abi>::traits::element_signed_container_type, _Abi>;
 

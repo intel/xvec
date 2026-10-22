@@ -505,20 +505,20 @@ constexpr void store_masked(x86_avx512_tag, const _Vp& value_original, std::span
   mandates_for_store(value_original, to, flags);
 
   target_overloads call_insn {
-    [=](xmm_register<uint8_t> auto v, auto m, auto p)  { _mm_mask_storeu_epi8(p, m, v.to_register()); },
-    [=](xmm_register<uint16_t> auto v, auto m, auto p) { _mm_mask_storeu_epi16(p, m, v.to_register()); },
-    [=](xmm_register<uint32_t> auto v, auto m, auto p) { _mm_mask_storeu_epi32(p, m, v.to_register()); },
-    [=](xmm_register<uint64_t> auto v, auto m, auto p) { _mm_mask_storeu_epi64(p, m, v.to_register()); },
+    [=](xmm_register<std::uint8_t> auto v, auto m, auto p)  { _mm_mask_storeu_epi8(p, m, v.to_register()); },
+    [=](xmm_register<std::uint16_t> auto v, auto m, auto p) { _mm_mask_storeu_epi16(p, m, v.to_register()); },
+    [=](xmm_register<std::uint32_t> auto v, auto m, auto p) { _mm_mask_storeu_epi32(p, m, v.to_register()); },
+    [=](xmm_register<std::uint64_t> auto v, auto m, auto p) { _mm_mask_storeu_epi64(p, m, v.to_register()); },
 
-    [=](ymm_register<uint8_t> auto v, auto m, auto p)  { _mm256_mask_storeu_epi8(p, m, v.to_register()); },
-    [=](ymm_register<uint16_t> auto v, auto m, auto p) { _mm256_mask_storeu_epi16(p, m, v.to_register()); },
-    [=](ymm_register<uint32_t> auto v, auto m, auto p) { _mm256_mask_storeu_epi32(p, m, v.to_register()); },
-    [=](ymm_register<uint64_t> auto v, auto m, auto p) { _mm256_mask_storeu_epi64(p, m, v.to_register()); },
+    [=](ymm_register<std::uint8_t> auto v, auto m, auto p)  { _mm256_mask_storeu_epi8(p, m, v.to_register()); },
+    [=](ymm_register<std::uint16_t> auto v, auto m, auto p) { _mm256_mask_storeu_epi16(p, m, v.to_register()); },
+    [=](ymm_register<std::uint32_t> auto v, auto m, auto p) { _mm256_mask_storeu_epi32(p, m, v.to_register()); },
+    [=](ymm_register<std::uint64_t> auto v, auto m, auto p) { _mm256_mask_storeu_epi64(p, m, v.to_register()); },
 
-    [=](zmm_register<uint8_t> auto v, auto m, auto p)  { _mm512_mask_storeu_epi8(p, m, v.to_register()); },
-    [=](zmm_register<uint16_t> auto v, auto m, auto p) { _mm512_mask_storeu_epi16(p, m, v.to_register()); },
-    [=](zmm_register<uint32_t> auto v, auto m, auto p) { _mm512_mask_storeu_epi32(p, m, v.to_register()); },
-    [=](zmm_register<uint64_t> auto v, auto m, auto p) { _mm512_mask_storeu_epi64(p, m, v.to_register()); },
+    [=](zmm_register<std::uint8_t> auto v, auto m, auto p)  { _mm512_mask_storeu_epi8(p, m, v.to_register()); },
+    [=](zmm_register<std::uint16_t> auto v, auto m, auto p) { _mm512_mask_storeu_epi16(p, m, v.to_register()); },
+    [=](zmm_register<std::uint32_t> auto v, auto m, auto p) { _mm512_mask_storeu_epi32(p, m, v.to_register()); },
+    [=](zmm_register<std::uint64_t> auto v, auto m, auto p) { _mm512_mask_storeu_epi64(p, m, v.to_register()); },
 
     [=](xmm_register<unsigned __int128> auto v, auto m, auto p) { _mm_mask_storeu_epi64(p, dupBits(m), v.to_register()); },
     [=](ymm_register<unsigned __int128> auto v, auto m, auto p) { _mm256_mask_storeu_epi64(p, dupBits(m), v.to_register()); },
@@ -610,20 +610,20 @@ constexpr _V load_masked(x86_avx512_tag, std::span<_Up, _Extent> from, const typ
   // different to the type of the output vec, and therefore be unrepresentable
   // during the load.
   target_overloads call_insn {
-    [=](xmm_register<uint8_t> auto, auto m, auto p)  { return _mm_maskz_loadu_epi8(m, p); },
-    [=](xmm_register<uint16_t> auto, auto m, auto p) { return _mm_maskz_loadu_epi16(m, p); },
-    [=](xmm_register<uint32_t> auto, auto m, auto p) { return _mm_maskz_loadu_epi32(m, p); },
-    [=](xmm_register<uint64_t> auto, auto m, auto p) { return _mm_maskz_loadu_epi64(m, p); },
+    [=](xmm_register<std::uint8_t> auto, auto m, auto p)  { return _mm_maskz_loadu_epi8(m, p); },
+    [=](xmm_register<std::uint16_t> auto, auto m, auto p) { return _mm_maskz_loadu_epi16(m, p); },
+    [=](xmm_register<std::uint32_t> auto, auto m, auto p) { return _mm_maskz_loadu_epi32(m, p); },
+    [=](xmm_register<std::uint64_t> auto, auto m, auto p) { return _mm_maskz_loadu_epi64(m, p); },
 
-    [=](ymm_register<uint8_t> auto, auto m, auto p)  { return _mm256_maskz_loadu_epi8(m, p); },
-    [=](ymm_register<uint16_t> auto, auto m, auto p) { return _mm256_maskz_loadu_epi16(m, p); },
-    [=](ymm_register<uint32_t> auto, auto m, auto p) { return _mm256_maskz_loadu_epi32(m, p); },
-    [=](ymm_register<uint64_t> auto, auto m, auto p) { return _mm256_maskz_loadu_epi64(m, p); },
+    [=](ymm_register<std::uint8_t> auto, auto m, auto p)  { return _mm256_maskz_loadu_epi8(m, p); },
+    [=](ymm_register<std::uint16_t> auto, auto m, auto p) { return _mm256_maskz_loadu_epi16(m, p); },
+    [=](ymm_register<std::uint32_t> auto, auto m, auto p) { return _mm256_maskz_loadu_epi32(m, p); },
+    [=](ymm_register<std::uint64_t> auto, auto m, auto p) { return _mm256_maskz_loadu_epi64(m, p); },
 
-    [=](zmm_register<uint8_t>  auto, auto m, auto p) { return _mm512_maskz_loadu_epi8(m, p); },
-    [=](zmm_register<uint16_t> auto, auto m, auto p) { return _mm512_maskz_loadu_epi16(m, p); },
-    [=](zmm_register<uint32_t> auto, auto m, auto p) { return _mm512_maskz_loadu_epi32(m, p); },
-    [=](zmm_register<uint64_t> auto, auto m, auto p) { return _mm512_maskz_loadu_epi64(m, p); },
+    [=](zmm_register<std::uint8_t>  auto, auto m, auto p) { return _mm512_maskz_loadu_epi8(m, p); },
+    [=](zmm_register<std::uint16_t> auto, auto m, auto p) { return _mm512_maskz_loadu_epi16(m, p); },
+    [=](zmm_register<std::uint32_t> auto, auto m, auto p) { return _mm512_maskz_loadu_epi32(m, p); },
+    [=](zmm_register<std::uint64_t> auto, auto m, auto p) { return _mm512_maskz_loadu_epi64(m, p); },
 
     //:TODO: DUP all mask bits in a single operation, and only then extract? Cheaper than dupping all bits in small units.
     [=](xmm_register<unsigned __int128> auto, auto m, auto p) { return _mm_maskz_loadu_epi64(dupBits(m), p); },
@@ -694,29 +694,29 @@ constexpr auto gather_from(x86_avx2_tag, const _Range& r,
 
 #if defined(__AVX512F__)
     // 32-bit Intel AVX-512
-    [=](xmm_register<int32_t> auto i, auto m) { return _mm_mmask_i32gather_epi32(__m128i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
-    [=](ymm_register<int32_t> auto i, auto m) { return _mm256_mmask_i32gather_epi32(__m256i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
+    [=](xmm_register<std::int32_t> auto i, auto m) { return _mm_mmask_i32gather_epi32(__m128i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
+    [=](ymm_register<std::int32_t> auto i, auto m) { return _mm256_mmask_i32gather_epi32(__m256i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
     
-    [=](xmm_register<int64_t> auto i, auto m) { return _mm_mmask_i64gather_epi64(__m128i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
-    [=](ymm_register<int64_t> auto i, auto m) { return _mm256_mmask_i64gather_epi64(__m256i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
+    [=](xmm_register<std::int64_t> auto i, auto m) { return _mm_mmask_i64gather_epi64(__m128i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
+    [=](ymm_register<std::int64_t> auto i, auto m) { return _mm256_mmask_i64gather_epi64(__m256i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
 
-    [=](zmm_register<int32_t> auto i, auto m) { return _mm512_mask_i32gather_epi32(__m512i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
-    [=](zmm_register<int64_t> auto i, auto m) { return _mm512_mask_i64gather_epi64(__m512(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
+    [=](zmm_register<std::int32_t> auto i, auto m) { return _mm512_mask_i32gather_epi32(__m512i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
+    [=](zmm_register<std::int64_t> auto i, auto m) { return _mm512_mask_i64gather_epi64(__m512(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
 
 #elif defined(__AVX2__)
     // Note the explicit growth of the mask to the correct register size to
     // avoid inadvertently leaving uninitialised elements active.
 
     // 32-bit Intel AVX2
-    [=](xmm_register<int32_t> auto i, auto m)
+    [=](xmm_register<std::int32_t> auto i, auto m)
       { return _mm_mask_i32gather_epi32(__m128i(), data_ptr, i.to_register(), grow<4>(m).to_register(), sizeof(_Tp)); },
-    [=](ymm_register<int32_t> auto i, auto m)
+    [=](ymm_register<std::int32_t> auto i, auto m)
       { return _mm256_mask_i32gather_epi32(__m256i(), data_ptr, i.to_register(), grow<8>(m).to_register(), sizeof(_Tp)); },
 
     // 64-bit Intel AVX2
-    [=](xmm_register<int64_t> auto i, auto m)
+    [=](xmm_register<std::int64_t> auto i, auto m)
       { return _mm_mask_i64gather_epi64(__m128i(), data_ptr, i.to_register(), grow<2>(m).to_register(), sizeof(_Tp)); },
-    [=](ymm_register<int64_t> auto i, auto m)
+    [=](ymm_register<std::int64_t> auto i, auto m)
       { return _mm256_mask_i64gather_epi64(__m256i(), data_ptr, i.to_register(), grow<4>(m).to_register(), sizeof(_Tp)); },
 
 #endif
@@ -726,7 +726,7 @@ constexpr auto gather_from(x86_avx2_tag, const _Range& r,
 
   // The indexes and the values to gether must be the same size, and at least
   // 32-bit signed to match the hardware expectation.
-  constexpr auto idxNumBytes = std::max({sizeof(int32_t), sizeof(_Tp), sizeof(_Idx)});
+  constexpr auto idxNumBytes = std::max({sizeof(std::int32_t), sizeof(_Tp), sizeof(_Idx)});
   using _IW = std::make_signed_t<container_for_num_bytes<idxNumBytes>>;
   const auto rmax = std::min<_IW>(r.size(), std::numeric_limits<_Idx>::max());
 
@@ -772,10 +772,10 @@ constexpr auto gather_from(x86_avx2_tag, const _Range& r,
 
 inline auto scatterImpl =
   []<typename _Tp, typename _VT, typename _IT>(basic_vec<_Tp, _VT> v,
-                                               basic_vec<int32_t, _IT> idx, auto ptr, uint64_t m)
+                                               basic_vec<std::int32_t, _IT> idx, auto ptr, std::uint64_t m)
 {
-  constexpr uint64_t justMaskBits = (1ULL << basic_vec<_Tp, _VT>::size()) - 1;
-  const uint64_t nm = justMaskBits & m;
+  constexpr std::uint64_t justMaskBits = (1ULL << basic_vec<_Tp, _VT>::size()) - 1;
+  const std::uint64_t nm = justMaskBits & m;
 
   constexpr bool isTp32 = (sizeof(_Tp) == 4);
 
@@ -805,7 +805,7 @@ scatter_to(x86_avx512_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
            const basic_vec<_Idx, _IdxAbi>& indexes, flags<_Flags...> flags)
 {
   auto ptr = std::to_address(r.begin());
-  const auto rmax = int32_t(std::min(r.size(), size_t(std::numeric_limits<_Idx>::max())));
+  const auto rmax = std::int32_t(std::min(r.size(), std::size_t(std::numeric_limits<_Idx>::max())));
 
   // Bind extra pointer and default mask parameters to the scatter lambda. Note
   // that a range check is added if necessary too.
@@ -821,7 +821,7 @@ scatter_to(x86_avx512_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
 
   // All scatter instructions can be made to use 32-bit indexes.
   // :TODO: A special case might be 64-bit values using 64-bit indexes
-  auto indexAs32 = vec<int32_t, basic_vec<_Idx, _IdxAbi>::size>(indexes);
+  auto indexAs32 = vec<std::int32_t, basic_vec<_Idx, _IdxAbi>::size>(indexes);
   chunked_invoke<(int)basic_vec<_Tp>::size>(impl, vec_as_container(values), indexAs32);
 }
 
@@ -836,7 +836,7 @@ scatter_to(x86_avx512_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
   auto ptr = std::to_address(r.begin());
 
   // Range check if required.
-  const auto rmax = _Idx(std::min(r.size(), size_t(std::numeric_limits<_Idx>::max())));
+  const auto rmax = _Idx(std::min(r.size(), std::size_t(std::numeric_limits<_Idx>::max())));
   auto rangeCheckedMask =
     contains_flag<detail::flag_unchecked>(flags) ? mask : (indexes >= _Idx(0) && indexes < rmax) && mask;
 
@@ -848,7 +848,7 @@ scatter_to(x86_avx512_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
 
   // All scatter instructions can be made to use 32-bit indexes.
   // :TODO: A special case might be 64-bit values using 64-bit indexes
-  auto indexAs32 = vec<int32_t, basic_vec<_Idx, _IdxAbi>::size>(indexes);
+  auto indexAs32 = vec<std::int32_t, basic_vec<_Idx, _IdxAbi>::size>(indexes);
   chunked_invoke<(int)basic_vec<_Tp>::size()>(impl, vec_as_container(values), indexAs32, rangeCheckedMask);
 }
 #endif
@@ -1110,64 +1110,64 @@ saturating_cast(x86_avx512_tag, const basic_vec<_Tp, _Abi>& value) noexcept
 {
   target_overloads impl {
     // S16 -> S8
-    [=](xmm_register<std::int16_t> auto in, int8_t) { return _mm_cvtsepi16_epi8(in.to_register()); },
-    [=](ymm_register<std::int16_t> auto in, int8_t) { return _mm256_cvtsepi16_epi8(in.to_register()); },
-    [=](zmm_register<std::int16_t> auto in, int8_t) { return _mm512_cvtsepi16_epi8(in.to_register()); },
+    [=](xmm_register<std::int16_t> auto in, std::int8_t) { return _mm_cvtsepi16_epi8(in.to_register()); },
+    [=](ymm_register<std::int16_t> auto in, std::int8_t) { return _mm256_cvtsepi16_epi8(in.to_register()); },
+    [=](zmm_register<std::int16_t> auto in, std::int8_t) { return _mm512_cvtsepi16_epi8(in.to_register()); },
 
     // U16 -> U8
-    [=](xmm_register<std::uint16_t> auto in, uint8_t) { return _mm_cvtusepi16_epi8(in.to_register()); },
-    [=](ymm_register<std::uint16_t> auto in, uint8_t) { return _mm256_cvtusepi16_epi8(in.to_register()); },
-    [=](zmm_register<std::uint16_t> auto in, uint8_t) { return _mm512_cvtusepi16_epi8(in.to_register()); },
+    [=](xmm_register<std::uint16_t> auto in, std::uint8_t) { return _mm_cvtusepi16_epi8(in.to_register()); },
+    [=](ymm_register<std::uint16_t> auto in, std::uint8_t) { return _mm256_cvtusepi16_epi8(in.to_register()); },
+    [=](zmm_register<std::uint16_t> auto in, std::uint8_t) { return _mm512_cvtusepi16_epi8(in.to_register()); },
 
     // S32 -> S8
-    [=](xmm_register<std::int32_t> auto in, int8_t) { return _mm_cvtsepi32_epi8(in.to_register()); },
-    [=](ymm_register<std::int32_t> auto in, int8_t) { return _mm256_cvtsepi32_epi8(in.to_register()); },
-    [=](zmm_register<std::int32_t> auto in, int8_t) { return _mm512_cvtsepi32_epi8(in.to_register()); },
+    [=](xmm_register<std::int32_t> auto in, std::int8_t) { return _mm_cvtsepi32_epi8(in.to_register()); },
+    [=](ymm_register<std::int32_t> auto in, std::int8_t) { return _mm256_cvtsepi32_epi8(in.to_register()); },
+    [=](zmm_register<std::int32_t> auto in, std::int8_t) { return _mm512_cvtsepi32_epi8(in.to_register()); },
 
     // U32 -> U8
-    [=](xmm_register<std::uint32_t> auto in, uint8_t) { return _mm_cvtusepi32_epi8(in.to_register()); },
-    [=](ymm_register<std::uint32_t> auto in, uint8_t) { return _mm256_cvtusepi32_epi8(in.to_register()); },
-    [=](zmm_register<std::uint32_t> auto in, uint8_t) { return _mm512_cvtusepi32_epi8(in.to_register()); },
+    [=](xmm_register<std::uint32_t> auto in, std::uint8_t) { return _mm_cvtusepi32_epi8(in.to_register()); },
+    [=](ymm_register<std::uint32_t> auto in, std::uint8_t) { return _mm256_cvtusepi32_epi8(in.to_register()); },
+    [=](zmm_register<std::uint32_t> auto in, std::uint8_t) { return _mm512_cvtusepi32_epi8(in.to_register()); },
 
     // S32 -> S16
-    [=](xmm_register<std::int32_t> auto in, int16_t) { return _mm_cvtsepi32_epi16(in.to_register()); },
-    [=](ymm_register<std::int32_t> auto in, int16_t) { return _mm256_cvtsepi32_epi16(in.to_register()); },
-    [=](zmm_register<std::int32_t> auto in, int16_t) { return _mm512_cvtsepi32_epi16(in.to_register()); },
+    [=](xmm_register<std::int32_t> auto in, std::int16_t) { return _mm_cvtsepi32_epi16(in.to_register()); },
+    [=](ymm_register<std::int32_t> auto in, std::int16_t) { return _mm256_cvtsepi32_epi16(in.to_register()); },
+    [=](zmm_register<std::int32_t> auto in, std::int16_t) { return _mm512_cvtsepi32_epi16(in.to_register()); },
 
     // U32 -> U16
-    [=](xmm_register<std::uint32_t> auto in, uint16_t) { return _mm_cvtusepi32_epi16(in.to_register()); },
-    [=](ymm_register<std::uint32_t> auto in, uint16_t) { return _mm256_cvtusepi32_epi16(in.to_register()); },
-    [=](zmm_register<std::uint32_t> auto in, uint16_t) { return _mm512_cvtusepi32_epi16(in.to_register()); },
+    [=](xmm_register<std::uint32_t> auto in, std::uint16_t) { return _mm_cvtusepi32_epi16(in.to_register()); },
+    [=](ymm_register<std::uint32_t> auto in, std::uint16_t) { return _mm256_cvtusepi32_epi16(in.to_register()); },
+    [=](zmm_register<std::uint32_t> auto in, std::uint16_t) { return _mm512_cvtusepi32_epi16(in.to_register()); },
 
     // S64 -> S8
-    [=](xmm_register<std::int64_t> auto in, int8_t) { return _mm_cvtsepi64_epi8(in.to_register()); },
-    [=](ymm_register<std::int64_t> auto in, int8_t) { return _mm256_cvtsepi64_epi8(in.to_register()); },
-    [=](zmm_register<std::int64_t> auto in, int8_t) { return _mm512_cvtsepi64_epi8(in.to_register()); },
+    [=](xmm_register<std::int64_t> auto in, std::int8_t) { return _mm_cvtsepi64_epi8(in.to_register()); },
+    [=](ymm_register<std::int64_t> auto in, std::int8_t) { return _mm256_cvtsepi64_epi8(in.to_register()); },
+    [=](zmm_register<std::int64_t> auto in, std::int8_t) { return _mm512_cvtsepi64_epi8(in.to_register()); },
 
     // U64 -> U8
-    [=](xmm_register<std::uint64_t> auto in, uint8_t) { return _mm_cvtusepi64_epi8(in.to_register()); },
-    [=](ymm_register<std::uint64_t> auto in, uint8_t) { return _mm256_cvtusepi64_epi8(in.to_register()); },
-    [=](zmm_register<std::uint64_t> auto in, uint8_t) { return _mm512_cvtusepi64_epi8(in.to_register()); },
+    [=](xmm_register<std::uint64_t> auto in, std::uint8_t) { return _mm_cvtusepi64_epi8(in.to_register()); },
+    [=](ymm_register<std::uint64_t> auto in, std::uint8_t) { return _mm256_cvtusepi64_epi8(in.to_register()); },
+    [=](zmm_register<std::uint64_t> auto in, std::uint8_t) { return _mm512_cvtusepi64_epi8(in.to_register()); },
 
     // S64 -> S16
-    [=](xmm_register<std::int64_t> auto in, int16_t) { return _mm_cvtsepi64_epi16(in.to_register()); },
-    [=](ymm_register<std::int64_t> auto in, int16_t) { return _mm256_cvtsepi64_epi16(in.to_register()); },
-    [=](zmm_register<std::int64_t> auto in, int16_t) { return _mm512_cvtsepi64_epi16(in.to_register()); },
+    [=](xmm_register<std::int64_t> auto in, std::int16_t) { return _mm_cvtsepi64_epi16(in.to_register()); },
+    [=](ymm_register<std::int64_t> auto in, std::int16_t) { return _mm256_cvtsepi64_epi16(in.to_register()); },
+    [=](zmm_register<std::int64_t> auto in, std::int16_t) { return _mm512_cvtsepi64_epi16(in.to_register()); },
 
     // U64 -> U16
-    [=](xmm_register<std::uint64_t> auto in, uint16_t) { return _mm_cvtusepi64_epi16(in.to_register()); },
-    [=](ymm_register<std::uint64_t> auto in, uint16_t) { return _mm256_cvtusepi64_epi16(in.to_register()); },
-    [=](zmm_register<std::uint64_t> auto in, uint16_t) { return _mm512_cvtusepi64_epi16(in.to_register()); },
+    [=](xmm_register<std::uint64_t> auto in, std::uint16_t) { return _mm_cvtusepi64_epi16(in.to_register()); },
+    [=](ymm_register<std::uint64_t> auto in, std::uint16_t) { return _mm256_cvtusepi64_epi16(in.to_register()); },
+    [=](zmm_register<std::uint64_t> auto in, std::uint16_t) { return _mm512_cvtusepi64_epi16(in.to_register()); },
 
     // S64 -> S32
-    [=](xmm_register<std::int64_t> auto in, int32_t) { return _mm_cvtsepi64_epi32(in.to_register()); },
-    [=](ymm_register<std::int64_t> auto in, int32_t) { return _mm256_cvtsepi64_epi32(in.to_register()); },
-    [=](zmm_register<std::int64_t> auto in, int32_t) { return _mm512_cvtsepi64_epi32(in.to_register()); },
+    [=](xmm_register<std::int64_t> auto in, std::int32_t) { return _mm_cvtsepi64_epi32(in.to_register()); },
+    [=](ymm_register<std::int64_t> auto in, std::int32_t) { return _mm256_cvtsepi64_epi32(in.to_register()); },
+    [=](zmm_register<std::int64_t> auto in, std::int32_t) { return _mm512_cvtsepi64_epi32(in.to_register()); },
 
     // U64 -> U32
-    [=](xmm_register<std::uint64_t> auto in, uint32_t) { return _mm_cvtusepi64_epi32(in.to_register()); },
-    [=](ymm_register<std::uint64_t> auto in, uint32_t) { return _mm256_cvtusepi64_epi32(in.to_register()); },
-    [=](zmm_register<std::uint64_t> auto in, uint32_t) { return _mm512_cvtusepi64_epi32(in.to_register()); },
+    [=](xmm_register<std::uint64_t> auto in, std::uint32_t) { return _mm_cvtusepi64_epi32(in.to_register()); },
+    [=](ymm_register<std::uint64_t> auto in, std::uint32_t) { return _mm256_cvtusepi64_epi32(in.to_register()); },
+    [=](zmm_register<std::uint64_t> auto in, std::uint32_t) { return _mm512_cvtusepi64_epi32(in.to_register()); },
 
     [=](auto unhandled, auto out)
       { static_assert(dependent_false<std::pair<decltype(unhandled), decltype(out)>>, "No target overload"); return out;}
@@ -1217,7 +1217,7 @@ shuffle_epi8_lut(_Gen, basic_vec<std::uint8_t, _Abi> indexes)
   auto rawIndexes = indexes.to_register();
 
   // Build a LUT which contains as many lanes as the indexes.
-  constexpr auto lut = vec<uint8_t, sizeof(rawIndexes)>([](auto idx) { return _Gen{}(idx & 0xF); });
+  constexpr auto lut = vec<std::uint8_t, sizeof(rawIndexes)>([](auto idx) { return _Gen{}(idx & 0xF); });
 
   // Use the fast in-lane byte shuffle.
   return basic_vec<std::uint8_t, _Abi>(shuffle_epi8(lut.to_register(), rawIndexes));
@@ -1317,12 +1317,12 @@ constexpr basic_vec<_Tp, _Abi> clz(x86_sse_tag, const basic_vec<_Tp, _Abi>& x) n
     // been added to the result of the clz but by putting it on the values to
     // lookup the compiler can hoist it.
     const auto lowClz =
-      shuffle_epi8_lut([](auto idx) -> std::uint8_t { return std::countl_zero(std::uint8_t(idx & 0xF)); }, bytes & uint8_t(0xF));
+      shuffle_epi8_lut([](auto idx) -> std::uint8_t { return std::countl_zero(std::uint8_t(idx & 0xF)); }, bytes & std::uint8_t(0xF));
     const auto highClz =
-      shuffle_epi8_lut([](auto idx) -> std::uint8_t { return std::countl_zero(std::uint8_t(idx & 0xF)) - 4; }, bytes >> uint8_t(4));
+      shuffle_epi8_lut([](auto idx) -> std::uint8_t { return std::countl_zero(std::uint8_t(idx & 0xF)) - 4; }, bytes >> std::uint8_t(4));
 
     // Select which clz actually applies here.
-    return simd_bit_cast<_Tp>(select(bytes > uint8_t(15), highClz, lowClz));
+    return simd_bit_cast<_Tp>(select(bytes > std::uint8_t(15), highClz, lowClz));
   };
 
   constexpr auto numElementBytes = sizeof(_Tp);
@@ -1437,7 +1437,7 @@ constexpr basic_vec<_Tp, _Abi> bitreverse(x86_sse_tag, const basic_vec<_Tp, _Abi
 template<vec_integral _Vp>
 requires (sizeof(typename _Vp::value_type) == 1) // Multi-byte reversal handled generically.
 constexpr _Vp bitreverse(x86_avxsnc_tag, const _Vp& x) noexcept
-  { return x86::gf2p8affine(x, uint64_t(0x8040201008040201)); }
+  { return x86::gf2p8affine(x, std::uint64_t(0x8040201008040201)); }
 
 template<typename _Tp, typename _Abi>
 requires (detail::is_floating_point_v<_Tp>)
@@ -1591,25 +1591,25 @@ constexpr basic_vec<_Tp, _Abi> saturating_add(x86_tag, const basic_vec<_Tp, _Abi
 {
   target_overloads impl {
     // 128-bit
-    [=](xmm_register<uint8_t> auto x, auto y) { return _mm_adds_epu8(x.to_register(), y.to_register()); },
-    [=](xmm_register<int8_t> auto x, auto y) { return _mm_adds_epi8(x.to_register(), y.to_register()); },
-    [=](xmm_register<uint16_t> auto x, auto y) { return _mm_adds_epu16(x.to_register(), y.to_register()); },
-    [=](xmm_register<int16_t> auto x, auto y) { return _mm_adds_epi16(x.to_register(), y.to_register()); },
+    [=](xmm_register<std::uint8_t> auto x, auto y) { return _mm_adds_epu8(x.to_register(), y.to_register()); },
+    [=](xmm_register<std::int8_t> auto x, auto y) { return _mm_adds_epi8(x.to_register(), y.to_register()); },
+    [=](xmm_register<std::uint16_t> auto x, auto y) { return _mm_adds_epu16(x.to_register(), y.to_register()); },
+    [=](xmm_register<std::int16_t> auto x, auto y) { return _mm_adds_epi16(x.to_register(), y.to_register()); },
 
     // 256-bit (but only in Intel AVX2 - Intel AVX has to break into 128-bit pieces instead).
 #if defined(__AVX2__)
-    [=](ymm_register<uint8_t> auto x, auto y) { return _mm256_adds_epu8(x.to_register(), y.to_register()); },
-    [=](ymm_register<int8_t> auto x, auto y) { return _mm256_adds_epi8(x.to_register(), y.to_register()); },
-    [=](ymm_register<uint16_t> auto x, auto y) { return _mm256_adds_epu16(x.to_register(), y.to_register()); },
-    [=](ymm_register<int16_t> auto x, auto y) { return _mm256_adds_epi16(x.to_register(), y.to_register()); },
+    [=](ymm_register<std::uint8_t> auto x, auto y) { return _mm256_adds_epu8(x.to_register(), y.to_register()); },
+    [=](ymm_register<std::int8_t> auto x, auto y) { return _mm256_adds_epi8(x.to_register(), y.to_register()); },
+    [=](ymm_register<std::uint16_t> auto x, auto y) { return _mm256_adds_epu16(x.to_register(), y.to_register()); },
+    [=](ymm_register<std::int16_t> auto x, auto y) { return _mm256_adds_epi16(x.to_register(), y.to_register()); },
 #endif
 
     // 512-bit
 #if defined(__AVX512F__)
-    [=](zmm_register<uint8_t> auto x, auto y) { return _mm512_adds_epu8(x.to_register(), y.to_register()); },
-    [=](zmm_register<int8_t> auto x, auto y) { return _mm512_adds_epi8(x.to_register(), y.to_register()); },
-    [=](zmm_register<uint16_t> auto x, auto y) { return _mm512_adds_epu16(x.to_register(), y.to_register()); },
-    [=](zmm_register<int16_t> auto x, auto y) { return _mm512_adds_epi16(x.to_register(), y.to_register()); },
+    [=](zmm_register<std::uint8_t> auto x, auto y) { return _mm512_adds_epu8(x.to_register(), y.to_register()); },
+    [=](zmm_register<std::int8_t> auto x, auto y) { return _mm512_adds_epi8(x.to_register(), y.to_register()); },
+    [=](zmm_register<std::uint16_t> auto x, auto y) { return _mm512_adds_epu16(x.to_register(), y.to_register()); },
+    [=](zmm_register<std::int16_t> auto x, auto y) { return _mm512_adds_epi16(x.to_register(), y.to_register()); },
  #endif
 
     [=](auto unhandled, auto) { static_assert(dependent_false<decltype(unhandled)>, "No target intrinsics"); return unhandled;}
@@ -1637,25 +1637,25 @@ constexpr basic_vec<_Tp, _Abi> saturating_sub(x86_tag, const basic_vec<_Tp, _Abi
 {
   target_overloads impl {
     // 128-bit
-    [=](xmm_register<uint8_t> auto x, auto y) { return _mm_subs_epu8(x.to_register(), y.to_register()); },
-    [=](xmm_register<int8_t> auto x, auto y) { return _mm_subs_epi8(x.to_register(), y.to_register()); },
-    [=](xmm_register<uint16_t> auto x, auto y) { return _mm_subs_epu16(x.to_register(), y.to_register()); },
-    [=](xmm_register<int16_t> auto x, auto y) { return _mm_subs_epi16(x.to_register(), y.to_register()); },
+    [=](xmm_register<std::uint8_t> auto x, auto y) { return _mm_subs_epu8(x.to_register(), y.to_register()); },
+    [=](xmm_register<std::int8_t> auto x, auto y) { return _mm_subs_epi8(x.to_register(), y.to_register()); },
+    [=](xmm_register<std::uint16_t> auto x, auto y) { return _mm_subs_epu16(x.to_register(), y.to_register()); },
+    [=](xmm_register<std::int16_t> auto x, auto y) { return _mm_subs_epi16(x.to_register(), y.to_register()); },
 
     // 256-bit (but only in Intel AVX2 - Intel AVX has to break into 128-bit pieces instead).
 #if defined(__AVX2__)
-    [=](ymm_register<uint8_t> auto x, auto y) { return _mm256_subs_epu8(x.to_register(), y.to_register()); },
-    [=](ymm_register<int8_t> auto x, auto y) { return _mm256_subs_epi8(x.to_register(), y.to_register()); },
-    [=](ymm_register<uint16_t> auto x, auto y) { return _mm256_subs_epu16(x.to_register(), y.to_register()); },
-    [=](ymm_register<int16_t> auto x, auto y) { return _mm256_subs_epi16(x.to_register(), y.to_register()); },
+    [=](ymm_register<std::uint8_t> auto x, auto y) { return _mm256_subs_epu8(x.to_register(), y.to_register()); },
+    [=](ymm_register<std::int8_t> auto x, auto y) { return _mm256_subs_epi8(x.to_register(), y.to_register()); },
+    [=](ymm_register<std::uint16_t> auto x, auto y) { return _mm256_subs_epu16(x.to_register(), y.to_register()); },
+    [=](ymm_register<std::int16_t> auto x, auto y) { return _mm256_subs_epi16(x.to_register(), y.to_register()); },
 #endif
 
     // 512-bit
 #if defined(__AVX512F__)
-    [=](zmm_register<uint8_t> auto x, auto y) { return _mm512_subs_epu8(x.to_register(), y.to_register()); },
-    [=](zmm_register<int8_t> auto x, auto y) { return _mm512_subs_epi8(x.to_register(), y.to_register()); },
-    [=](zmm_register<uint16_t> auto x, auto y) { return _mm512_subs_epu16(x.to_register(), y.to_register()); },
-    [=](zmm_register<int16_t> auto x, auto y) { return _mm512_subs_epi16(x.to_register(), y.to_register()); },
+    [=](zmm_register<std::uint8_t> auto x, auto y) { return _mm512_subs_epu8(x.to_register(), y.to_register()); },
+    [=](zmm_register<std::int8_t> auto x, auto y) { return _mm512_subs_epi8(x.to_register(), y.to_register()); },
+    [=](zmm_register<std::uint16_t> auto x, auto y) { return _mm512_subs_epu16(x.to_register(), y.to_register()); },
+    [=](zmm_register<std::int16_t> auto x, auto y) { return _mm512_subs_epi16(x.to_register(), y.to_register()); },
  #endif
 
     [=](auto unhandled, auto) { static_assert(dependent_false<decltype(unhandled)>, "No target intrinsics"); return unhandled;}
