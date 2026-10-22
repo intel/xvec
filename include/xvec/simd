@@ -224,7 +224,6 @@ public:
   /// accepts a builtin type, so in the case where a register is directly
   /// convertible to a builtin, this would introduce ambiguity and so is
   /// disabled.
-  /// @ingroup cpp26_ctor
   explicit constexpr basic_vec(register_type r) noexcept
     requires (!std::is_convertible_v<register_type, const builtin_type&>)
     : data(traits::from_register(r)) {}

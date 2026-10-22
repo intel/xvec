@@ -48,6 +48,7 @@ namespace _XVEC_NAMESPACE::simd
 template<detail::math_floating_point _Vp> constexpr detail::deduced_vec_t<_Vp> abs(const _Vp& v) { return detail::abs(target, v); }
 
 /// @brief Compute the absolute value of each signed-integral element.
+/// @ingroup future_math
 /// @tparam _Vp The input vector type.
 /// @param v The input vector.
 /// @return A vector containing the absolute values.

@@ -175,6 +175,11 @@ public:
   /// Move-assign a mask.
   constexpr basic_mask& operator=(basic_mask&&) noexcept = default;
 
+  /// @} cpp26_mask_overview
+
+  /// @addtogroup cpp26_mask_ctor
+  /// @{
+
   /// @brief Build a mask from a boolean value.
   /// @param b The boolean value to broadcast to all mask elements.
   constexpr explicit basic_mask(std::same_as<value_type> auto b) noexcept :
