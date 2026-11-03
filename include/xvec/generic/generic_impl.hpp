@@ -375,7 +375,10 @@ constexpr _V load_masked(generic_tag, std::span<_Up, _Extent> from, const typena
       return select(m, _V([=](auto i) -> typename _V::value_type { return from[i]; }), _V());
     else
     {
-      memcpy(&result, from.data(), sizeof(_Up) * _V::size);
+      // Only the elements within the span may be read; the bounds check above
+      // permits a span smaller than the vector as long as the mask excludes the rest.
+      const auto numElementsToLoad = std::min<std::size_t>(_V::size, from.size());
+      memcpy(&result, from.data(), sizeof(_Up) * numElementsToLoad);
       return select(m, _V(SourceType(result)), _V());
     }
   }

@@ -701,7 +701,7 @@ constexpr auto gather_from(x86_avx2_tag, const _Range& r,
     [=](ymm_register<std::int64_t> auto i, auto m) { return _mm256_mmask_i64gather_epi64(__m256i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
 
     [=](zmm_register<std::int32_t> auto i, auto m) { return _mm512_mask_i32gather_epi32(__m512i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
-    [=](zmm_register<std::int64_t> auto i, auto m) { return _mm512_mask_i64gather_epi64(__m512(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
+    [=](zmm_register<std::int64_t> auto i, auto m) { return _mm512_mask_i64gather_epi64(__m512i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
 
 #elif defined(__AVX2__)
     // Note the explicit growth of the mask to the correct register size to
@@ -709,15 +709,15 @@ constexpr auto gather_from(x86_avx2_tag, const _Range& r,
 
     // 32-bit Intel AVX2
     [=](xmm_register<std::int32_t> auto i, auto m)
-      { return _mm_mask_i32gather_epi32(__m128i(), data_ptr, i.to_register(), grow<4>(m).to_register(), sizeof(_Tp)); },
+      { return _mm_mask_i32gather_epi32(__m128i(), reinterpret_cast<const int*>(data_ptr), i.to_register(), grow<4>(m).to_register(), sizeof(_Tp)); },
     [=](ymm_register<std::int32_t> auto i, auto m)
-      { return _mm256_mask_i32gather_epi32(__m256i(), data_ptr, i.to_register(), grow<8>(m).to_register(), sizeof(_Tp)); },
+      { return _mm256_mask_i32gather_epi32(__m256i(), reinterpret_cast<const int*>(data_ptr), i.to_register(), grow<8>(m).to_register(), sizeof(_Tp)); },
 
     // 64-bit Intel AVX2
     [=](xmm_register<std::int64_t> auto i, auto m)
-      { return _mm_mask_i64gather_epi64(__m128i(), data_ptr, i.to_register(), grow<2>(m).to_register(), sizeof(_Tp)); },
+      { return _mm_mask_i64gather_epi64(__m128i(), reinterpret_cast<const long long*>(data_ptr), i.to_register(), grow<2>(m).to_register(), sizeof(_Tp)); },
     [=](ymm_register<std::int64_t> auto i, auto m)
-      { return _mm256_mask_i64gather_epi64(__m256i(), data_ptr, i.to_register(), grow<4>(m).to_register(), sizeof(_Tp)); },
+      { return _mm256_mask_i64gather_epi64(__m256i(), reinterpret_cast<const long long*>(data_ptr), i.to_register(), grow<4>(m).to_register(), sizeof(_Tp)); },
 
 #endif
 

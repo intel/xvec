@@ -640,41 +640,6 @@ public:
 #endif // _XVEC_DEFINE_OUTPUT_OPERATORS
 };
 
-/// @addtogroup xvec_unclassified
-/// @{
-
-/// A simd-generic version of simd_bit_cast which directly invokes std::bit_cast.
-template<typename _To, typename _From>
-constexpr auto simd_bit_cast(const _From& v) noexcept { return std::bit_cast<_To>(v); }
-
-/// A simd::vec version of simd_bit_cast which allows reinterpreting the bits of
-/// a simd::vec as elements of a different size.
-template<detail::vectorizable _To, vec_type _From>
-constexpr
-auto simd_bit_cast(const _From& v) noexcept
-{
-  // If the user attempts to convert to a type which cannot form a whole number
-  // of elements from the source then they probably misunderstood what the size
-  // was. In this situation it is more helpful to raise an error to correct the
-  // misunderstanding than have a constraint which prevents the bit cast from
-  // even being matched.
-  static_assert((_From::size() * sizeof(typename _From::value_type)) % sizeof(_To) == 0);
-
-  // Two steps are necessary to figure out the new type - change the element type of the vec while retaining the same abi,
-  // and then resize it to match the bit-size of the original object.
-  constexpr int newNumElements = _From::size() * sizeof(typename _From::value_type) / sizeof(_To);
-  using new_type = vec<_To, newNumElements>;
-  if constexpr (detail::isLlvm)
-    // LLVM/oneAPI are happy to assign any vector type to any other vector type, which is good because bit_cast doesn't work for them.
-    // NOTE: If -flax-vector-conversions is enabled, this line reports an error though. Disable that option in that case.
-    return new_type{v.to_builtin()};
-  else
-    // GCC requires a bit cast to get things to work properly. This code doesn't work on LLVM.
-    return new_type{__builtin_bit_cast(typename new_type::builtin_type, v.to_builtin())};
-}
-
-/// @} xvec_unclassified
-
 /// Deduction guide from static extent. Anything span-like, with a compile-time
 /// size which is small enough to fit a vec, and with valid element types can
 /// be turned into a vec.
