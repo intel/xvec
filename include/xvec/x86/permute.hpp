@@ -144,7 +144,7 @@ _mm512_permutex2var_epi8_emulated(__m512i v_data_0,
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
   };
-  auto lsbSelector = _mm512_ternarylogic_epi32(__v64qi() + 0x1, shuffle_identity, v_shuf_idxs, 0xAC);
+  auto lsbSelector = _mm512_ternarylogic_epi32(__m512i(__v64qi() + 0x1), __m512i(shuffle_identity), v_shuf_idxs, 0xAC);
 
   // Use the selector to choose which byte to pick. We have to do this for the odd and even indexes independently
   // which means we end up doing some redundant work. Note that the second shuffle_epi8 only overwrites
