@@ -30,8 +30,21 @@ TARGETS = {
 }
 
 
+def llvm_mca(cxx):
+    """The llvm-mca matching the compiler: LLVM_MCA if set, else clang++[-N] -> llvm-mca[-N]."""
+    if "LLVM_MCA" in os.environ:
+        return os.environ["LLVM_MCA"]
+    for arg in cxx:  # skip wrappers such as ccache
+        if "clang++" in os.path.basename(arg):
+            return arg.replace("clang++", "llvm-mca")
+    return "llvm-mca"
+
+
 def run(*cmd):
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+    except FileNotFoundError as error:
+        raise RuntimeError(f"cannot run {cmd[0]}: {error}")
     if result.returncode:
         raise RuntimeError(f"{cmd[0]} failed:\n{result.stderr.strip()}")
     return result.stdout
@@ -57,7 +70,7 @@ def model(source, target, march, cpu, defines):
     )
     ASM_DIR.mkdir(exist_ok=True)
     (ASM_DIR / f"{source.stem}.{target}.s").write_text(kernel + "\n")
-    if re.search(r"^\s*(call|j[a-z]+)\b", kernel, re.M):
+    if re.search(r"^\s*(call|j)[a-z]*\b", kernel, re.M):
         return None  # a call or branch makes the straight-line cycle model meaningless
     if not kernel.strip():
         return 0  # nothing to execute; llvm-mca rejects empty input
@@ -65,7 +78,7 @@ def model(source, target, march, cpu, defines):
         f.write(kernel)
         f.flush()
         mca = [
-            os.environ.get("CXX", "clang++").replace("clang++", "llvm-mca"),
+            llvm_mca(cxx),
             "-mtriple=x86_64-pc-linux-gnu", "-mcpu=" + cpu, "-iterations=1",
         ]
         report = run(*mca, "-json", f.name)
@@ -79,7 +92,7 @@ def model(source, target, march, cpu, defines):
 def main():
     parser = argparse.ArgumentParser(
         description="Compare the llvm-mca cycle count of each scenario against baselines.json.",
-        epilog="Environment: CXX (default clang++; llvm-mca is derived from it), CXXFLAGS.",
+        epilog="Environment: CXX (default clang++), CXXFLAGS, LLVM_MCA (default: derived from CXX).",
     )
     parser.add_argument("scenarios", nargs="*", metavar="SCENARIO",
                         help="scenario names to run (default: all)")

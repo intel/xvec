@@ -12,7 +12,7 @@ kernel (`-iterations=1`) exceeds the limit in `baselines.json`.
 The assembly given to `llvm-mca` is written to `build-performance/<scenario>.<target>.s`.
 The full `llvm-mca` report is next to it as `.mca.txt`. Review them, and if it is correct run `--update` to accept the reported numbers as the new baseline.
 
-Set `CXX` (e.g. `clang++-18`) to select the toolchain; `llvm-mca` is derived from it by name (`llvm-mca-18`). `CXXFLAGS` adds options. Baselines depend
+Set `CXX` (e.g. `clang++-18`) to select the toolchain; `llvm-mca` is derived from the `clang++` word in it (`llvm-mca-18`), so a wrapper such as `CXX='ccache clang++-18'` works. Set `LLVM_MCA` to override. `CXXFLAGS` adds options. Baselines depend
 on the compiler and llvm-mca versions, so regenerate them whenever you change either.
 A kernel containing a call or branch can't be modeled as straight-line code, so it is
 recorded as `null` in `baselines.json` and skipped. It fails only if a previously
