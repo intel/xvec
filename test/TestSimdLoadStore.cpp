@@ -1114,7 +1114,13 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(Load_From_Static_Extent_Ranges, TypeParam, Loadabl
   std::iota(std::begin(carray), std::end(carray), value_type{});
   static_assert(xvec::simd::detail::span_extent_v<decltype(carray)> == TypeParam::size);
   const auto carrayExpected = getMemoryBlock<value_type, TypeParam::size>();
+  BOOST_TEST(to_array(xvec::simd::partial_load<TypeParam>(carray)) == carrayExpected,
+             boost::test_tools::per_element());
   BOOST_TEST(to_array(xvec::simd::unchecked_load<TypeParam>(carray)) == carrayExpected,
+             boost::test_tools::per_element());
+  BOOST_TEST(to_array(xvec::simd::partial_load<TypeParam>(carray, evenMask)) == maskedExpected,
+             boost::test_tools::per_element());
+  BOOST_TEST(to_array(xvec::simd::unchecked_load<TypeParam>(carray, evenMask)) == maskedExpected,
              boost::test_tools::per_element());
 
   auto shortArray = getMemoryBlock<value_type, shortSize>();
@@ -1166,6 +1172,29 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(Store_To_Static_Extent_Ranges, TypeParam,
   constexpr auto evenMask = getEvenMask<TypeParam>();
   const auto values = xvec::simd::iota<TypeParam>;
   const auto expectedValues = to_array(values);
+
+  { // C-style array
+    value_type carray[vectorSize] = {};
+    std::fill(std::begin(carray), std::end(carray), fillValue);
+    xvec::simd::partial_store(values, carray);
+    BOOST_TEST(std::to_array(carray) == expectedValues, boost::test_tools::per_element());
+
+    std::fill(std::begin(carray), std::end(carray), fillValue);
+    xvec::simd::unchecked_store(values, carray);
+    BOOST_TEST(std::to_array(carray) == expectedValues, boost::test_tools::per_element());
+
+    auto maskedExpected = expectedValues;
+    for (std::size_t i = 1; i < vectorSize; i += 2)
+      maskedExpected[i] = fillValue;
+
+    std::fill(std::begin(carray), std::end(carray), fillValue);
+    xvec::simd::partial_store(values, carray, evenMask);
+    BOOST_TEST(std::to_array(carray) == maskedExpected, boost::test_tools::per_element());
+
+    std::fill(std::begin(carray), std::end(carray), fillValue);
+    xvec::simd::unchecked_store(values, carray, evenMask);
+    BOOST_TEST(std::to_array(carray) == maskedExpected, boost::test_tools::per_element());
+  }
 
   { // Exact size match
     StoreTest<value_type, vectorSize, vectorSize> test{value_type{}};
