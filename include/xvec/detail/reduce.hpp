@@ -165,8 +165,19 @@ reduce_min(const _V& v, const typename _V::mask_type& m) noexcept
 {
   // Note that it is more efficient to replace unused elements with the max
   // value as that eliminates any need to do masking during the reduction.
-  const auto r = select(m, v, std::numeric_limits<_V>::max());
-  return reduce_min(r);
+  // For types with an infinity, max() is smaller than +inf, so use +inf
+  // instead and only return max() when no element is selected.
+  if constexpr (std::numeric_limits<typename _V::value_type>::has_infinity)
+  {
+    if (none_of(m))
+      return std::numeric_limits<typename _V::value_type>::max();
+    return reduce_min(select(m, v, std::numeric_limits<_V>::infinity()));
+  }
+  else
+  {
+    const auto r = select(m, v, std::numeric_limits<_V>::max());
+    return reduce_min(r);
+  }
 }
 
 /// @brief Return the maximum vector element.
@@ -184,8 +195,19 @@ reduce_max(const _V& v, const typename _V::mask_type& m) noexcept
 {
   // Note that it is more efficient to replace unused elements with the lowest
   // value as that eliminates any need to do masking during the reduction.
-  const auto r = select(m, v, std::numeric_limits<_V>::lowest());
-  return reduce_max(r);
+  // For types with an infinity, lowest() is larger than -inf, so use -inf
+  // instead and only return lowest() when no element is selected.
+  if constexpr (std::numeric_limits<typename _V::value_type>::has_infinity)
+  {
+    if (none_of(m))
+      return std::numeric_limits<typename _V::value_type>::lowest();
+    return reduce_max(select(m, v, -std::numeric_limits<_V>::infinity()));
+  }
+  else
+  {
+    const auto r = select(m, v, std::numeric_limits<_V>::lowest());
+    return reduce_max(r);
+  }
 }
 
 /// @brief Return the minimum of a scalar value.
