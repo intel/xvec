@@ -64,28 +64,28 @@ template<vec_complex _Vc> constexpr auto abs(const _Vc& value) { return sqrt(nor
 /// @param value The input vector.
 /// @return A complex vector with each component rounded toward positive infinity.
 template<vec_complex _Vc> inline _Vc ceil(const _Vc& value)
- { return simd_bit_cast<typename _Vc::value_type>(ceil(simd_bit_cast<typename _Vc::value_type::value_type>(value))); }
+ { return simd_bit_cast<typename _Vc::value_type>(ceil(simd_bit_cast<detail::complex_element_type<typename _Vc::value_type>>(value))); }
 
 /// @brief Round the real and imaginary components of each element downward.
 /// @tparam _Vc The complex vector type.
 /// @param value The input vector.
 /// @return A complex vector with each component rounded toward negative infinity.
 template<vec_complex _Vc> inline _Vc floor(const _Vc& value)
- { return simd_bit_cast<typename _Vc::value_type>(floor(simd_bit_cast<typename _Vc::value_type::value_type>(value))); }
+ { return simd_bit_cast<typename _Vc::value_type>(floor(simd_bit_cast<detail::complex_element_type<typename _Vc::value_type>>(value))); }
 
 /// @brief Truncate the real and imaginary components of each element.
 /// @tparam _Vc The complex vector type.
 /// @param value The input vector.
 /// @return A complex vector with each component rounded toward zero.
 template<vec_complex _Vc> inline _Vc trunc(const _Vc& value)
- { return simd_bit_cast<typename _Vc::value_type>(trunc(simd_bit_cast<typename _Vc::value_type::value_type>(value))); }
+ { return simd_bit_cast<typename _Vc::value_type>(trunc(simd_bit_cast<detail::complex_element_type<typename _Vc::value_type>>(value))); }
 
 /// @brief Apply round independently to the real and imaginary components.
 /// @tparam _Vc The complex vector type.
 /// @param value The input vector.
 /// @return A complex vector containing the rounded components.
 template<vec_complex _Vc> inline _Vc round(const _Vc& value)
- { return simd_bit_cast<typename _Vc::value_type>(round(simd_bit_cast<typename _Vc::value_type::value_type>(value))); }
+ { return simd_bit_cast<typename _Vc::value_type>(round(simd_bit_cast<detail::complex_element_type<typename _Vc::value_type>>(value))); }
 
 /// @} future_math
 
