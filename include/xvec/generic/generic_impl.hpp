@@ -135,7 +135,7 @@ constexpr typename _Vp::value_type subscript(generic_tag, const _Vp& v, simd_siz
     // individual components.
     using _E = complex_element_type<typename _Vp::value_type>;
     auto asCmplxArray = std::bit_cast<std::array<_E, 2>>(t);
-    return std::complex<_E>(asCmplxArray[0], asCmplxArray[1]);
+    return typename _Vp::value_type(asCmplxArray[0], asCmplxArray[1]);
   }
   else if constexpr (mask_type<_Vp>)
     return typename _Vp::value_type(t);
@@ -896,18 +896,16 @@ fmsubadd(generic_tag, const basic_vec<_Tp, _Abi>& x, const basic_vec<_Tp, _Abi>&
 /// Complex FMA. This can never be IEEE precise within 0.5ULP, but do the best possible with real FMAs to
 /// get as close as possible.
 /// @brief Fused multiply-add for complex simd values.
-/// @tparam _Tp The floating-point type
-/// @tparam _Abi The ABI of the vec
+/// @tparam _Vp The complex vector type
 /// @param x The first operand
 /// @param y The second operand
 /// @param acc The accumulator
 /// @return The result of x * y + acc
-template<typename _Tp, typename _Abi>
-inline auto fma(generic_tag,
-                const basic_vec<std::complex<_Tp>, _Abi>& x,
-                const basic_vec<std::complex<_Tp>, _Abi>& y,
-                const basic_vec<std::complex<_Tp>, _Abi>& acc)
+template<vec_complex _Vp>
+inline auto fma(generic_tag, const _Vp& x, const _Vp& y, const _Vp& acc)
 {
+  using _Tp = complex_element_type<typename _Vp::value_type>;
+
   // Convert incoming arguments into raw elements.
   const auto ex = simd_bit_cast<_Tp>(x);
   const auto ey = simd_bit_cast<_Tp>(y);
@@ -919,17 +917,17 @@ inline auto fma(generic_tag,
 
   // Do the actual maths.
   const auto tmp = fmaddsub(dupXImag, swapY, simd_bit_cast<_Tp>(acc));
-  return simd_bit_cast<std::complex<_Tp>>(fmaddsub(dupXReal, simd_bit_cast<_Tp>(y), tmp));
+  return simd_bit_cast<typename _Vp::value_type>(fmaddsub(dupXReal, ey, tmp));
 }
 
 /// Conjugation for complex values.
 /// @brief Conjugation for complex values.
-/// @tparam _Tp The floating-point type
-/// @tparam _Abi The ABI of the vec
+/// @tparam _Vp The complex vector type
 /// @param v The simd of complex values
 /// @return The conjugated simd of complex values
-template<typename _Tp, typename _Abi>
-constexpr auto conj(generic_tag, const basic_vec<std::complex<_Tp>, _Abi>& v) {
+template<vec_complex _Vp>
+constexpr auto conj(generic_tag, const _Vp& v) {
+  using _Tp = complex_element_type<typename _Vp::value_type>;
   // Synthesise a conjugation by setting the MSB of the complex value's container, and use that
   // to flip the imaginary sign bit.
   static_assert(detail::is_floating_point_v<_Tp>,
@@ -937,10 +935,10 @@ constexpr auto conj(generic_tag, const basic_vec<std::complex<_Tp>, _Abi>& v) {
 
   // XOR the floating-point value with the sign bit to flip the sign bit of the imaginaries.
   using _C = container_for_type<_Tp>;
-  const auto msbImag = vec<_C, _Abi::num_elements * 2>([](auto idx) { return idx % 2 == 0 ? _C() : std::rotr(_C(1), 1); });
+  const auto msbImag = vec<_C, _Vp::size() * 2>([](auto idx) { return idx % 2 == 0 ? _C() : std::rotr(_C(1), 1); });
   const auto t = simd_bit_cast<_C>(v) ^ msbImag;
 
-  return simd_bit_cast<std::complex<_Tp>>(t);
+  return simd_bit_cast<typename _Vp::value_type>(t);
 }
 
 ///@{
