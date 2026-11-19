@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include <complex>
-
 #include <xvec/detail/config.hpp>
 #include <xvec/detail/utilities.hpp>
 

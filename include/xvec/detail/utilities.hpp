@@ -11,7 +11,6 @@
 #include <xvec/detail/config.hpp>
 
 #include <bit>
-#include <complex>
 #include <cstdint>
 #include <cstddef>
 #include <span>
@@ -20,6 +19,7 @@
 #include <utility>
 
 #if __STDC_HOSTED__
+#include <complex>
 #include <stdexcept>
 #include <string>
 #endif
@@ -40,7 +40,9 @@ template <simd_size_type _Np> using size_constant = std::integral_constant<simd_
 /// components (real first), be constructible from (real, imag), and provide real() and imag() const member functions.
 /// @note This is an xvec extension since the C++26 draft only requires std::complex.
 template<typename _Tp> struct complex_traits {};
+#if __STDC_HOSTED__
 template<typename _Tp> struct complex_traits<std::complex<_Tp>> { using value_type = _Tp; };
+#endif
 
 namespace detail
 {

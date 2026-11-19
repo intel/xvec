@@ -16,7 +16,9 @@
 #include <concepts>
 #include <functional>
 
+#if __STDC_HOSTED__
 #include <iostream>
+#endif
 
 #include <xvec/detail/utilities.hpp>
 
@@ -428,6 +430,7 @@ public:
 
   /// @} cpp26_mask_cond
 
+#if __STDC_HOSTED__
   /// @brief Output the mask to a stream as individual bits.
   /// @ingroup xvec_stream_output
   /// @param stream The destination stream.
@@ -437,6 +440,7 @@ public:
     stream << value.to_bitset();
     return stream;
   }
+#endif // __STDC_HOSTED__
 };
 
 /// @addtogroup cpp26_mask_reductions
