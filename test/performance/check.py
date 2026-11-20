@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (C) 2026 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 """Compare the llvm-mca cycle count of each scenario's kernel against stored limits.
 
 The analysed assembly is written to build-performance/<scenario>.<target>.s,
