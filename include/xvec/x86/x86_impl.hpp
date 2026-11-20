@@ -667,6 +667,60 @@ constexpr auto load(x86_avx512_tag, std::span<_Up, _Extent> from, _Flags flags)
 }
 #endif
 
+#if defined(__AVX2__)
+/// Hardware gather of the given register-sized indexes under a mask.
+/// @tparam ScaleBytes Size in bytes of each element in the memory region.
+/// @param data_ptr Pointer to the region of memory from which to gather.
+template<std::size_t ScaleBytes, vec_integral _Indexes>
+inline auto gather_impl(const void* data_ptr, _Indexes indexes, auto mask)
+{
+  static_assert(ScaleBytes == 4 || ScaleBytes == 8, "gather_impl supports only scales 4 and 8");
+
+  using Index = typename _Indexes::value_type;
+  constexpr auto IndexBytes = sizeof(Index);
+  static_assert(std::same_as<Index, std::int32_t> || std::same_as<Index, std::int64_t>);
+  // The wider of the index and data vectors determines the instruction width.
+  constexpr auto bytes = _Indexes::size() * std::max(IndexBytes, ScaleBytes);
+  const auto i = indexes.to_register();
+#if defined(__AVX512F__)
+  const auto m = (mask & mask.__mask_from_count(_Indexes::size())).to_register();
+  if constexpr (IndexBytes == 4 && ScaleBytes == 4) {
+    if constexpr (bytes <= 16) return _mm_mmask_i32gather_epi32(__m128i(), m, i, data_ptr, ScaleBytes);
+    else if constexpr (bytes <= 32) return _mm256_mmask_i32gather_epi32(__m256i(), m, i, data_ptr, ScaleBytes);
+    else return _mm512_mask_i32gather_epi32(__m512i(), m, i, data_ptr, ScaleBytes);
+  } else if constexpr (IndexBytes == 4) {
+    if constexpr (bytes <= 16) return _mm_mmask_i32gather_epi64(__m128i(), m, i, data_ptr, ScaleBytes);
+    else if constexpr (bytes <= 32) return _mm256_mmask_i32gather_epi64(__m256i(), m, i, data_ptr, ScaleBytes);
+    else return _mm512_mask_i32gather_epi64(__m512i(), m, i, data_ptr, ScaleBytes);
+  } else if constexpr (ScaleBytes == 4) {
+    if constexpr (bytes <= 16) return _mm_mmask_i64gather_epi32(__m128i(), m, i, data_ptr, ScaleBytes);
+    else if constexpr (bytes <= 32) return _mm256_mmask_i64gather_epi32(__m128i(), m, i, data_ptr, ScaleBytes);
+    else return _mm512_mask_i64gather_epi32(__m256i(), m, i, data_ptr, ScaleBytes);
+  } else {
+    if constexpr (bytes <= 16) return _mm_mmask_i64gather_epi64(__m128i(), m, i, data_ptr, ScaleBytes);
+    else if constexpr (bytes <= 32) return _mm256_mmask_i64gather_epi64(__m256i(), m, i, data_ptr, ScaleBytes);
+    else return _mm512_mask_i64gather_epi64(__m512i(), m, i, data_ptr, ScaleBytes);
+  }
+#else
+  // Zero inactive mask lanes, including padding in a partial register.
+  constexpr auto lanes = (bytes <= 16 ? 16 : 32) / std::max(IndexBytes, ScaleBytes);
+  const auto m = grow<lanes>(mask).to_register();
+  if constexpr (ScaleBytes == 4) {
+    const auto p = static_cast<const int*>(data_ptr);
+    if constexpr (IndexBytes == 4 && bytes <= 16) return _mm_mask_i32gather_epi32(__m128i(), p, i, m, ScaleBytes);
+    else if constexpr (IndexBytes == 4) return _mm256_mask_i32gather_epi32(__m256i(), p, i, m, ScaleBytes);
+    else if constexpr (bytes <= 16) return _mm_mask_i64gather_epi32(__m128i(), p, i, m, ScaleBytes);
+    else return _mm256_mask_i64gather_epi32(__m128i(), p, i, m, ScaleBytes);
+  } else {
+    const auto p = static_cast<const long long*>(data_ptr);
+    if constexpr (IndexBytes == 4 && bytes <= 16) return _mm_mask_i32gather_epi64(__m128i(), p, i, m, ScaleBytes);
+    else if constexpr (IndexBytes == 4) return _mm256_mask_i32gather_epi64(__m256i(), p, i, m, ScaleBytes);
+    else if constexpr (bytes <= 16) return _mm_mask_i64gather_epi64(__m128i(), p, i, m, ScaleBytes);
+    else return _mm256_mask_i64gather_epi64(__m256i(), p, i, m, ScaleBytes);
+  }
+#endif
+}
+
 /// @brief Masked gather operation.
 /// @tparam _Tp The element type to gather
 /// @tparam _Idx the index type
@@ -675,87 +729,41 @@ constexpr auto load(x86_avx512_tag, std::span<_Up, _Extent> from, _Flags flags)
 /// @param indexes The indexes to gather from the memory region.
 /// @return  A vec of the gathered indexes from the supplied region.
 template<typename _Range, std::integral _Idx, typename _IdxAbi, typename... _Flags>
-// :TODO: 4/8 byte gathers can be done from either 4/8 byte indexes, so handle
-// those scenarios too to avoid having to cast unnecessarily. Also handle
-// smaller sizes by reordering the indexes into the gather position, rather than
-// converting up and down (which is more expensive).
 requires
   std::ranges::contiguous_range<_Range> &&
   std::ranges::sized_range<_Range> &&
-  (sizeof(std::ranges::range_value_t<_Range>) <= 8) // Can't handle 128-bit gathers yet.
+  (sizeof(std::ranges::range_value_t<_Range>) == 4 || sizeof(std::ranges::range_value_t<_Range>) == 8)
 constexpr auto gather_from(x86_avx2_tag, const _Range& r,
                            const typename basic_vec<_Idx, _IdxAbi>::mask_type& mask,
                            const basic_vec<_Idx, _IdxAbi>& indexes, flags<_Flags...> flags)
 {
   using _Tp = std::ranges::range_value_t<_Range>;
-  auto data_ptr = std::ranges::data(r);
+  const void* data_ptr = std::ranges::data(r);
 
-  target_overloads impl {
-
-#if defined(__AVX512F__)
-    // 32-bit Intel AVX-512
-    [=](xmm_register<std::int32_t> auto i, auto m) { return _mm_mmask_i32gather_epi32(__m128i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
-    [=](ymm_register<std::int32_t> auto i, auto m) { return _mm256_mmask_i32gather_epi32(__m256i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
-    
-    [=](xmm_register<std::int64_t> auto i, auto m) { return _mm_mmask_i64gather_epi64(__m128i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
-    [=](ymm_register<std::int64_t> auto i, auto m) { return _mm256_mmask_i64gather_epi64(__m256i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
-
-    [=](zmm_register<std::int32_t> auto i, auto m) { return _mm512_mask_i32gather_epi32(__m512i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
-    [=](zmm_register<std::int64_t> auto i, auto m) { return _mm512_mask_i64gather_epi64(__m512i(), m.to_register(), i.to_register(), data_ptr, sizeof(_Tp)); },
-
-#elif defined(__AVX2__)
-    // Note the explicit growth of the mask to the correct register size to
-    // avoid inadvertently leaving uninitialised elements active.
-
-    // 32-bit Intel AVX2
-    [=](xmm_register<std::int32_t> auto i, auto m)
-      { return _mm_mask_i32gather_epi32(__m128i(), reinterpret_cast<const int*>(data_ptr), i.to_register(), grow<4>(m).to_register(), sizeof(_Tp)); },
-    [=](ymm_register<std::int32_t> auto i, auto m)
-      { return _mm256_mask_i32gather_epi32(__m256i(), reinterpret_cast<const int*>(data_ptr), i.to_register(), grow<8>(m).to_register(), sizeof(_Tp)); },
-
-    // 64-bit Intel AVX2
-    [=](xmm_register<std::int64_t> auto i, auto m)
-      { return _mm_mask_i64gather_epi64(__m128i(), reinterpret_cast<const long long*>(data_ptr), i.to_register(), grow<2>(m).to_register(), sizeof(_Tp)); },
-    [=](ymm_register<std::int64_t> auto i, auto m)
-      { return _mm256_mask_i64gather_epi64(__m256i(), reinterpret_cast<const long long*>(data_ptr), i.to_register(), grow<4>(m).to_register(), sizeof(_Tp)); },
-
-#endif
-
-    [=](auto unhandled, auto) { static_assert(dependent_false<decltype(unhandled)>); }
-  };
-
-  // The indexes and the values to gether must be the same size, and at least
-  // 32-bit signed to match the hardware expectation.
-  constexpr auto idxNumBytes = std::max({sizeof(std::int32_t), sizeof(_Tp), sizeof(_Idx)});
-  using _IW = std::make_signed_t<container_for_num_bytes<idxNumBytes>>;
-  const auto rmax = std::min<_IW>(std::ranges::size(r), std::numeric_limits<_Idx>::max());
+  // Hardware indices are signed; a full-range uint32_t needs a 64-bit index.
+  using _IW = std::conditional_t<(std::numeric_limits<_Idx>::digits <= 31), std::int32_t, std::int64_t>;
+  using Word = container_for_type<_Tp>;
+  const auto rmax = std::ranges::size(r);
 
   auto wrapper = [=]<typename _VecIdx>(_VecIdx idx, auto m) {
     using RetypedIndex = rebind_t<_IW, _VecIdx>;
     auto ri = RetypedIndex(idx);
 
-    // Note that the mask is actively resized to zero out unwanted positions.
-    // Converting to the register in the builtin will merely leave unused
-    // positions uninitialized, which might make them active with an invalid
-    // index.
-    auto rm = typename RetypedIndex::mask_type(m);
-
-    // Add a bounds check if necessary.
-    if constexpr (!contains_flag<flag_unchecked>(flags))
-      rm = rm && (ri >= _IW(0) && ri < rmax);
-
-    // Do the gather, reading back elements which are at least as big as the required type, and then downcasting to the types size if necessary.
-    auto t = RetypedIndex(impl(ri, rm));
-    auto r = vec<container_for_type<_Tp>, _VecIdx::size>(t);
-
-    // Return the values in their proper type form.
-    return simd_bit_cast<_Tp>(r);
+    if constexpr (!contains_flag<flag_unchecked>(flags)) {
+      if constexpr (std::is_signed_v<_Idx>)
+        m = m && (idx >= _Idx(0));
+      if (rmax <= std::numeric_limits<_Idx>::max())
+        m = m && (idx < static_cast<_Idx>(rmax));
+    }
+    using Result = rebind_t<Word, _VecIdx>;
+    auto rm = typename Result::mask_type(m);
+    return simd_bit_cast<_Tp>(Result(gather_impl<sizeof(_Tp)>(data_ptr, ri, rm)));
   };
 
   if constexpr (contains_flag<flag_unchecked>(flags))
     checkStaticMemoryBounds("gather", indexes, rmax, mask);
 
-  return chunked_invoke<int(vec<_IW>::size)>(wrapper, indexes, mask);
+  return chunked_invoke<std::min(vec<_IW>::size(), vec<Word>::size())>(wrapper, indexes, mask);
 }
 
 template<detail::contiguous_sized_range _Range, vec_integral _Idx, typename... _Flags>
@@ -767,6 +775,7 @@ constexpr auto gather_from(x86_avx2_tag, const _Range& r,
   constexpr auto m = typename _Idx::mask_type(true);
   return partial_gather_from(r, m, indexes, flags);
 }
+#endif // __AVX2__
 
 #if defined(__AVX512F__)
 

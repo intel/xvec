@@ -69,6 +69,25 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(GatherFromContiguousRange, TypeParam, AllSimdTypes
   BOOST_SIMD_EQUAL(unchecked_gather_from(table, rebind_cast<int64_t>(indexes)), uncheckedExpected);
 }
 
+BOOST_AUTO_TEST_CASE(GatherWithMixedIndexAndElementWidths)
+{
+  using I32 = xvec::simd::vec<std::int32_t, 5>;
+  using I64 = xvec::simd::vec<std::int64_t, 5>;
+
+  const std::int64_t high = std::int64_t{1} << 40;
+  const std::array<std::int64_t, 4> wide = {high + 1, high + 2, high + 3, high + 4};
+  const I32 idx32(std::array<std::int32_t, 5>{3, 0, 2, 1, 3});
+  const I64 expectedWide(std::array<std::int64_t, 5>{wide[3], wide[0], wide[2], wide[1], wide[3]});
+  BOOST_SIMD_EQUAL(unchecked_gather_from(wide, idx32), expectedWide);
+
+  const std::array<std::int32_t, 4> narrow = {-17, 29, -31, 43};
+  // Truncating high + 1 before checking bounds would incorrectly select narrow[1].
+  const I64 idx64(std::array<std::int64_t, 5>{2, high + 1, 0, 1, 2});
+  const auto active = idx64 != std::int64_t{0};
+  const I32 expectedNarrow(std::array<std::int32_t, 5>{-31, 0, 0, 29, -31});
+  BOOST_SIMD_EQUAL(partial_gather_from(narrow, active, idx64), expectedNarrow);
+}
+
 BOOST_AUTO_TEST_CASE_TEMPLATE(GatherFromContiguousRangeWithConversion, TypeParam, LoadableSimdTypes)
 {
   using xvec::rebind_cast;
