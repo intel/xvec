@@ -168,6 +168,35 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ReduceMinMaxWithMask, TypeParam, OrderableWithIden
   BOOST_TEST(reduce_max(f.v0, m.mask0) == do_reduce(f.v0, m.mask0, tmin, [](auto x, auto y) { return std::max(x, y); }));
 }
 
+// When every selected element is an infinity, the result must be that infinity
+// rather than the max()/lowest() used for an empty mask (issue #65).
+template<typename _T> using HasInfinity = boost::mp11::mp_bool<std::numeric_limits<typename _T::value_type>::has_infinity>;
+using OrderableWithInfinitySimdTypes = boost::mp11::mp_copy_if<OrderableWithIdentitySimdTypes, HasInfinity>;
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(ReduceMinMaxWithMaskInfinity, TypeParam, OrderableWithInfinitySimdTypes)
+{
+  using _Tp = typename TypeParam::value_type;
+  constexpr _Tp inf = std::numeric_limits<_Tp>::infinity();
+
+  // Select only the first element.
+  typename TypeParam::mask_type first([](auto i) { return i == 0; });
+  const TypeParam pos([](auto i) { return i == 0 ? inf : _Tp(5); });
+  const TypeParam neg([](auto i) { return i == 0 ? -inf : _Tp(5); });
+
+  BOOST_TEST(reduce_min(pos, first) == inf);
+  BOOST_TEST(reduce_max(neg, first) == -inf);
+
+  // Select every element.
+  typename TypeParam::mask_type all(true);
+  BOOST_TEST(reduce_min(TypeParam(inf), all) == inf);
+  BOOST_TEST(reduce_max(TypeParam(-inf), all) == -inf);
+
+  // An empty mask still gives max()/lowest().
+  typename TypeParam::mask_type empty_mask = {};
+  BOOST_TEST(reduce_min(pos, empty_mask) == std::numeric_limits<_Tp>::max());
+  BOOST_TEST(reduce_max(neg, empty_mask) == std::numeric_limits<_Tp>::lowest());
+}
+
 auto customMax = [](auto x, auto y) { using std::max; return max(x, y); };
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(ReduceScalarCustom, TypeParam, ArithmeticTypes)
