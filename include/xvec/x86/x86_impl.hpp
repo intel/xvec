@@ -286,7 +286,8 @@ constexpr _Vp fma(x86_avxspr_tag, const _Vp& x, const _Vp& y, const _Vp& acc) {
   return chunked_invoke(wrapper, x, y, acc);
 }
 
-template<vec_of<std::complex<_Float16>> _Vp>
+template<vec_complex _Vp>
+requires is_fp16_v<complex_element_type<typename _Vp::value_type>>
 constexpr _Vp fma(x86_avxspr_tag, const _Vp& x, const _Vp& y, const _Vp& acc) {
   target_overloads impl {
     [=](xmm_register<_Float16> auto x, auto y, auto acc) { return _mm_fmadd_pch(x.to_register(), y.to_register(), acc.to_register()); },
@@ -297,7 +298,7 @@ constexpr _Vp fma(x86_avxspr_tag, const _Vp& x, const _Vp& y, const _Vp& acc) {
 
   auto wrapper = [=](auto a, auto b, auto c) { return decltype(a)(impl(a, b, c)); }; // Return a vec from an intrinsic.
   auto t =  chunked_invoke(wrapper, simd_bit_cast<_Float16>(x), simd_bit_cast<_Float16>(y), simd_bit_cast<_Float16>(acc));
-  return simd_bit_cast<std::complex<_Float16>>(t);
+  return simd_bit_cast<typename _Vp::value_type>(t);
 }
 
 template<vec_of<_Float16> _Vp>
@@ -328,7 +329,8 @@ fmsubadd(x86_avxspr_tag, const _Vp& x, const _Vp& y, const _Vp& acc)
   return chunked_invoke(wrapper, x, y, acc);
 }
 
-template<vec_of<std::complex<_Float16>> _Vp>
+template<vec_complex _Vp>
+requires is_fp16_v<complex_element_type<typename _Vp::value_type>>
 constexpr _Vp builtin_operator(x86_avxspr_tag, const _Vp& x, const _Vp& y, std::multiplies<>)
 {
   target_overloads impl {
@@ -340,7 +342,7 @@ constexpr _Vp builtin_operator(x86_avxspr_tag, const _Vp& x, const _Vp& y, std::
 
   auto wrapper = [=](auto a, auto b) { return decltype(a)(impl(a, b)); }; // Return a vec from an intrinsic.
   auto t =  chunked_invoke(wrapper, simd_bit_cast<_Float16>(x), simd_bit_cast<_Float16>(y));
-  return simd_bit_cast<std::complex<_Float16>>(t);
+  return simd_bit_cast<typename _Vp::value_type>(t);
 }
 
 #endif
@@ -969,9 +971,9 @@ constexpr auto builtin_operator(x86_avx512_tag, basic_vec<_Tp, _Abi> x, basic_ve
 /// @param rhs The right-hand operand to compare
 /// @return A compact bit mask with one element for each complex element.
 /// \internal
-template<typename _Tp, typename _Abi, mask_operator _Op> // :TODO: Or specifically equal-not-equal?
-requires (detail::is_floating_point_v<_Tp>)
-constexpr auto builtin_operator(x86_avx512_tag, basic_vec<std::complex<_Tp>, _Abi> lhs, basic_vec<std::complex<_Tp>, _Abi> rhs, _Op cmp_op)
+template<complex_number _Tp, typename _Abi, mask_operator _Op> // :TODO: Or specifically equal-not-equal?
+requires (detail::is_floating_point_v<complex_element_type<_Tp>>)
+constexpr auto builtin_operator(x86_avx512_tag, basic_vec<_Tp, _Abi> lhs, basic_vec<_Tp, _Abi> rhs, _Op cmp_op)
 {
   using binop_type = std::remove_cvref_t<_Op>;
   constexpr bool isEqualOp = std::is_same_v<binop_type, std::equal_to<>>;
@@ -988,7 +990,7 @@ constexpr auto builtin_operator(x86_avx512_tag, basic_vec<std::complex<_Tp>, _Ab
 
   auto impl = [=]<typename _Vec>(_Vec x, _Vec y)
   {
-    const auto bits = builtin_operator(x86_avx512_tag{}, simd_bit_cast<_Tp>(x), simd_bit_cast<_Tp>(y), cmp_op);
+    const auto bits = builtin_operator(x86_avx512_tag{}, simd_bit_cast<complex_element_type<_Tp>>(x), simd_bit_cast<complex_element_type<_Tp>>(y), cmp_op);
     auto rb = reduceBitPair(bits.to_builtin());
     return typename _Vec::mask_type(rb);
   };

@@ -91,7 +91,7 @@ constexpr auto builtin_operator(compact_mask_tag, const _Vp& x, const _Vp& y, _O
 /// equality or inequality.
 template<vec_complex _Vp, mask_operator _Op>
 constexpr typename _Vp::mask_type builtin_operator(generic_tag, _Vp lhs, _Vp rhs, _Op) {
-  using _Tp = typename _Vp::value_type::value_type;
+  using _Tp = complex_element_type<typename _Vp::value_type>;
 
   static_assert(sizeof(_Tp) <= 8, "Can't deal with 128-bit elements like complex<double> yet");
 
