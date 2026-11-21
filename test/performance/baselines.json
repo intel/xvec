@@ -63,6 +63,22 @@
   "avxsnc": 19,
   "sse": 109
  },
+ "conj_cf16": {
+  "avx": 11,
+  "avx2": 11,
+  "avx512": 11,
+  "avxglc": 12,
+  "avxsnc": 11,
+  "sse": 7
+ },
+ "conj_cf32": {
+  "avx": 11,
+  "avx2": 11,
+  "avx512": 11,
+  "avxglc": 12,
+  "avxsnc": 11,
+  "sse": 7
+ },
  "countl_zero_u32": {
   "avx": 24,
   "avx2": 17,
@@ -70,6 +86,14 @@
   "avxglc": 7,
   "avxsnc": 8,
   "sse": 20
+ },
+ "eq_cf32": {
+  "avx": 9,
+  "avx2": 7,
+  "avx512": 15,
+  "avxglc": 15,
+  "avxsnc": 15,
+  "sse": 10
  },
  "expand_u32": {
   "avx": null,
@@ -86,6 +110,22 @@
   "avxglc": 33,
   "avxsnc": 21,
   "sse": 111
+ },
+ "fma_cf16": {
+  "avx": null,
+  "avx2": 505,
+  "avx512": 974,
+  "avxglc": 13,
+  "avxsnc": 839,
+  "sse": null
+ },
+ "fma_f16": {
+  "avx": null,
+  "avx2": 255,
+  "avx512": 506,
+  "avxglc": 8,
+  "avxsnc": 438,
+  "sse": null
  },
  "gather_complex_f64": {
   "avx": 19,
@@ -134,6 +174,14 @@
   "avxglc": 4,
   "avxsnc": 4,
   "sse": 7
+ },
+ "mul_cf32": {
+  "avx": null,
+  "avx2": 16,
+  "avx512": 14,
+  "avxglc": 14,
+  "avxsnc": 14,
+  "sse": null
  },
  "permute_complex_f64": {
   "avx": null,
