@@ -13,7 +13,6 @@
 #include <cstddef> // std::size_t
 #include <cstdint> // std::uint8_t, std::uint64_t
 #include <limits> // std::numeric_limits
-#include <memory> // std::to_address
 #include <type_traits>
 #include <algorithm> // std::min, std::max
 #include <utility> // std::index_sequence
@@ -703,7 +702,7 @@ template<detail::contiguous_sized_range _Range, vec_integral _Idx, typename... _
 constexpr auto gather_from(generic_tag, const _Range& r, const _Idx& indexes, flags<_Flags...> flags)
 {
   using _Tp = std::ranges::range_value_t<_Range>;
-  const auto rmax = r.size();
+  const auto rmax = std::ranges::size(r);
 
   if constexpr (contains_flag<flag_unchecked>(flags))
     checkStaticMemoryBounds("gather", indexes, rmax);
@@ -741,7 +740,7 @@ constexpr auto gather_from(generic_tag, const _Range& r,
                            const _Idx& indexes, flags<_Flags...> flags)
 {
   using _Tp = std::ranges::range_value_t<_Range>;
-  const auto rmax = r.size();
+  const auto rmax = std::ranges::size(r);
 
   if constexpr (contains_flag<flag_unchecked>(flags))
     checkStaticMemoryBounds("gather", indexes, rmax, mask);
@@ -780,8 +779,8 @@ template<typename _Range, vec_type _Vp, vec_integral _Idx, typename... _Flags>
 constexpr void
 scatter_to(generic_tag, const _Vp& values, _Range&& r, const _Idx& indexes, flags<_Flags...> flags)
 {
-  const auto rmax = r.size();
-  auto data_ptr = std::to_address(r.begin());
+  const auto rmax = std::ranges::size(r);
+  auto data_ptr = std::ranges::data(r);
 
   if constexpr (contains_flag<flag_unchecked>(flags))
     checkStaticMemoryBounds("scatter", indexes, rmax);
@@ -814,8 +813,8 @@ scatter_to(generic_tag, const _Vp& values, _Range&& r,
            const typename _Idx::mask_type& mask,
            const _Idx& indexes, flags<_Flags...> flags)
 {
-  const auto rmax = r.size();
-  auto data_ptr = std::to_address(r.begin());
+  const auto rmax = std::ranges::size(r);
+  auto data_ptr = std::ranges::data(r);
 
   if constexpr (contains_flag<flag_unchecked>(flags))
     checkStaticMemoryBounds("scatter", indexes, rmax, mask);

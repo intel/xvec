@@ -60,6 +60,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(GatherFromContiguousRange, TypeParam, AllSimdTypes
   BOOST_SIMD_EQUAL(partial_gather_from(table, rebind_cast<int32_t>(indexes)), checkedExpected);
   BOOST_SIMD_EQUAL(partial_gather_from(table, rebind_cast<int64_t>(indexes)), checkedExpected);
 
+  _Tp carray[rangeSize] = {};
+  std::copy(table.begin(), table.end(), std::begin(carray));
+  BOOST_SIMD_EQUAL(partial_gather_from(carray, rebind_cast<int32_t>(indexes)), checkedExpected);
+
   // The unchecked variant may read outside the logical range, but every index
   // still addresses valid storage in the backing allocation.
   BOOST_SIMD_EQUAL(unchecked_gather_from(table, rebind_cast<int64_t>(indexes)), uncheckedExpected);
@@ -146,6 +150,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(MaskedGatherFromContiguousRange, TypeParam, AllSim
 
   const auto indexesAs64 = rebind_cast<int64_t>(indexes);
   BOOST_SIMD_EQUAL(partial_gather_from(table, typename decltype(indexesAs64)::mask_type(mask), indexesAs64), expected);
+
+  _Tp carray[rangeSize] = {};
+  std::copy(table.begin(), table.end(), std::begin(carray));
+  BOOST_SIMD_EQUAL(partial_gather_from(carray, typename decltype(indexesAs32)::mask_type(mask), indexesAs32), expected);
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(MaskedGatherFromContiguousRangeWithConversion, TypeParam, LoadableSimdTypes)
@@ -274,6 +282,12 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ScatterToRangeWithSameType, TypeParam, AllSimdType
   auto table64 = std::ranges::subrange(memory64.begin() + tableOffset, memory64.begin() + tableOffset + rangeSize);
   partial_scatter_to(f.v0, table64, rebind_cast<int64_t>(indexes));
   BOOST_TEST(memory64 == expectedMemory, boost::test_tools::per_element());
+
+  typename TypeParam::value_type carray[rangeSize] = {};
+  std::copy_n(originalMemory.begin() + tableOffset, rangeSize, std::begin(carray));
+  partial_scatter_to(f.v0, carray, rebind_cast<int32_t>(indexes));
+  for (int i = 0; i < rangeSize; ++i)
+    BOOST_TEST(carray[i] == expectedMemory[tableOffset + i]);
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(MaskedScatterToContiguousRange, TypeParam, AllSimdTypes)
@@ -334,6 +348,12 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(MaskedScatterToContiguousRange, TypeParam, AllSimd
   auto table64 = std::ranges::subrange(memory64.begin() + tableOffset, memory64.begin() + tableOffset + rangeSize);
   partial_scatter_to(f.v0, table64, typename decltype(indexesAs64)::mask_type(mask), indexesAs64);
   BOOST_TEST(memory64 == expectedMemory, boost::test_tools::per_element());
+
+  typename TypeParam::value_type carray[rangeSize] = {};
+  std::copy_n(originalMemory.begin() + tableOffset, rangeSize, std::begin(carray));
+  partial_scatter_to(f.v0, carray, typename decltype(indexesAs32)::mask_type(mask), indexesAs32);
+  for (int i = 0; i < rangeSize; ++i)
+    BOOST_TEST(carray[i] == expectedMemory[tableOffset + i]);
 }
 
 #if defined(_XVEC_HAS_CONSTEXPR)

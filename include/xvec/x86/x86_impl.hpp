@@ -20,7 +20,6 @@
 #include <functional> // std::equal_to, std::less, etc.
 #include <bit> // std::popcount
 #include <limits> // std::numeric_limits
-#include <memory> // std::to_address
 #include <utility> // std::pair
 
 #include <xvec/detail/config.hpp>
@@ -688,7 +687,7 @@ constexpr auto gather_from(x86_avx2_tag, const _Range& r,
                            const basic_vec<_Idx, _IdxAbi>& indexes, flags<_Flags...> flags)
 {
   using _Tp = std::ranges::range_value_t<_Range>;
-  auto data_ptr = std::to_address(r.begin());
+  auto data_ptr = std::ranges::data(r);
 
   target_overloads impl {
 
@@ -728,7 +727,7 @@ constexpr auto gather_from(x86_avx2_tag, const _Range& r,
   // 32-bit signed to match the hardware expectation.
   constexpr auto idxNumBytes = std::max({sizeof(std::int32_t), sizeof(_Tp), sizeof(_Idx)});
   using _IW = std::make_signed_t<container_for_num_bytes<idxNumBytes>>;
-  const auto rmax = std::min<_IW>(r.size(), std::numeric_limits<_Idx>::max());
+  const auto rmax = std::min<_IW>(std::ranges::size(r), std::numeric_limits<_Idx>::max());
 
   auto wrapper = [=]<typename _VecIdx>(_VecIdx idx, auto m) {
     using RetypedIndex = rebind_t<_IW, _VecIdx>;
@@ -804,8 +803,8 @@ constexpr void
 scatter_to(x86_avx512_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
            const basic_vec<_Idx, _IdxAbi>& indexes, flags<_Flags...> flags)
 {
-  auto ptr = std::to_address(r.begin());
-  const auto rmax = std::int32_t(std::min(r.size(), std::size_t(std::numeric_limits<_Idx>::max())));
+  auto ptr = std::ranges::data(r);
+  const auto rmax = std::int32_t(std::min(std::ranges::size(r), std::size_t(std::numeric_limits<_Idx>::max())));
 
   // Bind extra pointer and default mask parameters to the scatter lambda. Note
   // that a range check is added if necessary too.
@@ -833,10 +832,10 @@ scatter_to(x86_avx512_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
            const typename basic_vec<_Idx, _IdxAbi>::mask_type& mask,
            const basic_vec<_Idx, _IdxAbi>& indexes, flags<_Flags...> flags)
 {
-  auto ptr = std::to_address(r.begin());
+  auto ptr = std::ranges::data(r);
 
   // Range check if required.
-  const auto rmax = _Idx(std::min(r.size(), std::size_t(std::numeric_limits<_Idx>::max())));
+  const auto rmax = _Idx(std::min(std::ranges::size(r), std::size_t(std::numeric_limits<_Idx>::max())));
   auto rangeCheckedMask =
     contains_flag<detail::flag_unchecked>(flags) ? mask : (indexes >= _Idx(0) && indexes < rmax) && mask;
 
