@@ -14,12 +14,15 @@
 #include <complex>
 #include <cstdint>
 #include <cstddef>
-#include <stdexcept>
 #include <span>
-#include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
+
+#if __STDC_HOSTED__
+#include <stdexcept>
+#include <string>
+#endif
 
 #include <xvec/detail/compat.hpp>
 
@@ -201,70 +204,69 @@ constexpr auto get_span_element_type_helper(const _Span& in) {
 
 template<class _Span> using span_element_type = decltype(get_span_element_type_helper(std::declval<_Span>()));
 
-/// Enable or disable memory range checking for `unchecked' (not default init)
-/// load/store operations. If enabled by the macro this checks that the memory
-/// operation doesn't fall outside the valid range, throwing a range error if
-/// such a bounds violation is detected.
-template<typename _Vec, std::size_t _Extent, typename _Mask = bool>
-constexpr void checkStaticMemoryBounds([[maybe_unused]] const std::string& op_name,
-                                       [[maybe_unused]] std::span<typename _Vec::value_type, _Extent> mem_span,
-                                       [[maybe_unused]] _Mask m = _Mask())
+// Failure is deliberately non-constexpr: valid constant evaluation succeeds,
+// but a violated bound cannot form a constant expression.
+template<typename _Count, typename _Mask = bool>
+[[noreturn]] inline void boundsFailure([[maybe_unused]] const char* op_name,
+                                      [[maybe_unused]] std::size_t range_size,
+                                      [[maybe_unused]] _Count required,
+                                      [[maybe_unused]] const _Mask& mask = _Mask(),
+                                      [[maybe_unused]] const char* quantity = " simd size:")
 {
-  constexpr bool opIsMasked = !std::same_as<_Mask, bool>;
-
-  // There is a precondition that the span is big enough to do the memory
-  // operation. However, if the span is a known size this can be explicitly
-  // checked at compile time. Note that this check is only performed when no
-  // mask is in use because the programmer may creating a mask to limit the
-  // operation to valid memory. Without knowing what the mask is we can't tell
-  // whether the precondition has been met or not. :TODO: If the mask is
-  // constexpr, check that too.
-  static_assert(opIsMasked || _Vec::size <= _Extent,
-                "Memory span is not big enough for simd load/store operation");
-
-#if defined(XVEC_ALWAYS_RANGE_CHECK_MEMORY)
-  auto opSize = _Vec::size;
-
-  if constexpr (opIsMasked) {
-    // A mask has been provided. The caller may be using the mask to limit the
-    // range. Check that no bits outside the valid range are set.
-    auto outOfRangeBits = !_Mask::__mask_from_count(mem_span.size());
-    if (any_of(outOfRangeBits & m))
-    {
-      std::string msg =
-        "xvec masked range error for " + op_name + ". Range size:" + std::to_string(mem_span.size()) +
-        " Mask:" + m.to_bitset().to_string();
-      throw std::out_of_range(msg);
-    }
-  }
-  else if (opSize > mem_span.size()) {
-    std::string msg =
-      "xvec range error for " + op_name + ". Range size:" + std::to_string(mem_span.size()) +
-      " simd size:" + std::to_string(opSize);
-    throw std::out_of_range(msg);
-  }
+#if __STDC_HOSTED__
+  std::string msg = std::same_as<_Mask, bool> ? "xvec range error for " : "xvec masked range error for ";
+  msg += op_name;
+  msg += ". Range size:" + std::to_string(range_size) + quantity + std::to_string(required);
+  if constexpr (!std::same_as<_Mask, bool>)
+    msg += " Mask:" + mask.to_bitset().to_string();
+  throw std::out_of_range(msg);
+#elif defined(__GNUC__) || defined(__clang__)
+  __builtin_trap();
+#else
+#error "Freestanding bounds checking requires compiler support for __builtin_trap"
 #endif
 }
 
-/// Enable or disable memory range checking for `unchecked' indexed operations
-/// (gather, scatter). If enabled by the macro this checks that the memory
-/// operation doesn't fall outside the valid range, throwing a range error if
-/// such a bounds violation is detected.
+/// Check static extents even when optional runtime memory checks are disabled.
+template<typename _Vec, std::size_t _Extent, typename _Mask = bool>
+constexpr void checkStaticMemoryBounds([[maybe_unused]] const char* op_name,
+                                      [[maybe_unused]] std::span<typename _Vec::value_type, _Extent> mem_span,
+                                      [[maybe_unused]] _Mask mask = _Mask())
+{
+  constexpr bool opIsMasked = !std::same_as<_Mask, bool>;
+  static_assert(opIsMasked || _Extent == std::dynamic_extent || std::size_t(_Vec::size) <= _Extent,
+                "Memory span is not big enough for simd load/store operation");
+
+#if defined(XVEC_ALWAYS_RANGE_CHECK_MEMORY)
+  if constexpr (opIsMasked)
+  {
+    if (mem_span.size() < std::size_t(_Vec::size))
+    {
+      auto outOfRangeBits = !_Mask::__mask_from_count(mem_span.size());
+      if (any_of(outOfRangeBits & mask))
+        boundsFailure(op_name, mem_span.size(), std::size_t(_Vec::size), mask);
+    }
+  }
+  else if (mem_span.size() < std::size_t(_Vec::size))
+    boundsFailure(op_name, mem_span.size(), std::size_t(_Vec::size));
+#endif
+}
+
+/// Check only selected gather/scatter indices, including negative indices.
 template<typename _Vec>
-constexpr void checkStaticMemoryBounds([[maybe_unused]] const std::string& op_name,
-                                       [[maybe_unused]] const _Vec& indexes,
-                                       [[maybe_unused]] std::size_t range_size,
-                                       [[maybe_unused]] typename _Vec::mask_type m = typename _Vec::mask_type(true))
+constexpr void checkStaticMemoryBounds([[maybe_unused]] const char* op_name,
+                                      [[maybe_unused]] const _Vec& indexes,
+                                      [[maybe_unused]] std::size_t range_size,
+                                      [[maybe_unused]] typename _Vec::mask_type mask = typename _Vec::mask_type(true))
 {
 #if defined(XVEC_ALWAYS_RANGE_CHECK_MEMORY)
-  auto biggestIndex = reduce_max(indexes, m);
-  if (std::size_t(biggestIndex) >= range_size)
-  {
-    std::string msg =
-      "xvec range error for " + op_name + ". Range size:" + std::to_string(range_size) +
-      " maxIndex:" + std::to_string(biggestIndex);
-    throw std::out_of_range(msg);
-  }
+  for (std::size_t i = 0; i < std::size_t(_Vec::size); ++i)
+    if (mask[i])
+    {
+      const auto index = +indexes[i];
+      if (std::cmp_less(index, 0) || std::cmp_greater_equal(index, range_size))
+        boundsFailure(op_name, range_size, index, mask, " index:");
+    }
 #endif
 }
 
