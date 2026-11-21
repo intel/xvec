@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Copyright (C) 2026 Intel Corporation
+//
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 // Checks that <xvec/simd> compiles and basic operations instantiate with -ffreestanding.
 #if defined(__GNUC__) && !defined(__clang__)
 #define _MM_MALLOC_H_INCLUDED // GCC's mm_malloc.h needs hosted malloc/free.
