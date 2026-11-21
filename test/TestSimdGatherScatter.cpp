@@ -69,6 +69,68 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(GatherFromContiguousRange, TypeParam, AllSimdTypes
   BOOST_SIMD_EQUAL(unchecked_gather_from(table, rebind_cast<int64_t>(indexes)), uncheckedExpected);
 }
 
+BOOST_AUTO_TEST_CASE(GatherWithMixedIndexAndElementWidths)
+{
+  using I32 = xvec::simd::vec<std::int32_t, 5>;
+  using I64 = xvec::simd::vec<std::int64_t, 5>;
+
+  const std::int64_t high = std::int64_t{1} << 40;
+  const std::array<std::int64_t, 4> wide = {high + 1, high + 2, high + 3, high + 4};
+  const I32 idx32(std::array<std::int32_t, 5>{3, 0, 2, 1, 3});
+  const I64 expectedWide(std::array<std::int64_t, 5>{wide[3], wide[0], wide[2], wide[1], wide[3]});
+  BOOST_SIMD_EQUAL(unchecked_gather_from(wide, idx32), expectedWide);
+
+  const std::array<std::int32_t, 4> narrow = {-17, 29, -31, 43};
+  // Truncating high + 1 before checking bounds would incorrectly select narrow[1].
+  const I64 idx64(std::array<std::int64_t, 5>{2, high + 1, 0, 1, 2});
+  const auto active = idx64 != std::int64_t{0};
+  const I32 expectedNarrow(std::array<std::int32_t, 5>{-31, 0, 0, 29, -31});
+  BOOST_SIMD_EQUAL(partial_gather_from(narrow, active, idx64), expectedNarrow);
+}
+
+BOOST_AUTO_TEST_CASE(MaskedGatherWithUnsignedIndexes)
+{
+  using I32 = xvec::simd::vec<std::int32_t, 6>;
+  using U32 = xvec::simd::vec<std::uint32_t, 6>;
+  using U64 = xvec::simd::vec<std::uint64_t, 6>;
+
+  const std::array<std::int32_t, 4> table = {-17, 29, -31, 43};
+  // Lane 1 is active with its high bit set (out of range), lane 3 is inactive but valid.
+  const I32 expected(std::array<std::int32_t, 6>{29, 0, 43, 0, -17, -31});
+
+  const U32 idx32(std::array<std::uint32_t, 6>{1, 0x80000000u, 3, 2, 0, 2});
+  const auto active32 = U32(std::array<std::uint32_t, 6>{1, 1, 1, 0, 1, 1}) != std::uint32_t{0};
+  BOOST_SIMD_EQUAL(partial_gather_from(table, active32, idx32), expected);
+
+  const U64 idx64(std::array<std::uint64_t, 6>{1, std::uint64_t{1} << 63, 3, 2, 0, 2});
+  const auto active64 = U64(std::array<std::uint64_t, 6>{1, 1, 1, 0, 1, 1}) != std::uint64_t{0};
+  BOOST_SIMD_EQUAL(partial_gather_from(table, active64, idx64), expected);
+}
+
+BOOST_AUTO_TEST_CASE(GatherWithRangeExceedingIndexTypeMaximum)
+{
+  using I32 = xvec::simd::vec<std::int32_t, 4>;
+  using I8 = xvec::simd::vec<std::int8_t, 4>;
+  using U8 = xvec::simd::vec<std::uint8_t, 4>;
+
+  // A 128-element range is larger than the maximum int8_t index, so the
+  // upper-bound comparison is skipped; the last index (127) must remain valid.
+  const auto table128 = build_memory<std::int32_t, 128>();
+  const I8 idx8(std::array<std::int8_t, 4>{127, -1, 0, 5});
+  const I32 expected8(std::array<std::int32_t, 4>{table128[127], 0, table128[0], 0});
+  BOOST_SIMD_EQUAL(partial_gather_from(table128, idx8), (I32(std::array<std::int32_t, 4>{table128[127], 0, table128[0], table128[5]})));
+  const auto active8 = idx8 != std::int8_t{5};
+  BOOST_SIMD_EQUAL(partial_gather_from(table128, active8, idx8), expected8);
+
+  // Likewise a 256-element range exceeds the maximum uint8_t index.
+  const auto table256 = build_memory<std::int32_t, 256>();
+  const U8 idxU8(std::array<std::uint8_t, 4>{255, 0, 128, 7});
+  const I32 expectedU8(std::array<std::int32_t, 4>{table256[255], table256[0], table256[128], 0});
+  BOOST_SIMD_EQUAL(partial_gather_from(table256, idxU8), (I32(std::array<std::int32_t, 4>{table256[255], table256[0], table256[128], table256[7]})));
+  const auto activeU8 = idxU8 != std::uint8_t{7};
+  BOOST_SIMD_EQUAL(partial_gather_from(table256, activeU8, idxU8), expectedU8);
+}
+
 BOOST_AUTO_TEST_CASE_TEMPLATE(GatherFromContiguousRangeWithConversion, TypeParam, LoadableSimdTypes)
 {
   using xvec::rebind_cast;
