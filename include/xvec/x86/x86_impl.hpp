@@ -14,7 +14,6 @@
 #include <cstdint>
 #include <cstddef> // std::size_t
 #include <concepts> // std::floating_point, std::unsigned_integral
-#include <complex>
 #include <type_traits>
 #include <algorithm> // std::min
 #include <functional> // std::equal_to, std::less, etc.

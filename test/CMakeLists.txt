@@ -80,6 +80,15 @@ endif()
 
 enable_testing()
 
+add_library(FreestandingInclude OBJECT EXCLUDE_FROM_ALL freestanding/include.cpp)
+target_include_directories(FreestandingInclude PRIVATE "${XVEC_ROOT_DIR}/include")
+target_compile_options(FreestandingInclude PRIVATE -ffreestanding)
+add_test(
+  NAME FreestandingInclude
+  COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}"
+    --target FreestandingInclude --config $<CONFIG>
+)
+
 # ── Test configuration ────────────────────────────────────────────────────────
 # Controls how many type/size combinations each test exercises:
 #   NATIVE: simd<T> for all T only

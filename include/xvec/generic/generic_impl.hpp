@@ -9,7 +9,6 @@
 #pragma once
 
 #include <bitset>
-#include <cmath> // std::ceil, std::floor, std::trunc, std::round, std::rint, std::sqrt
 #include <cstddef> // std::size_t
 #include <cstdint> // std::uint8_t, std::uint64_t
 #include <limits> // std::numeric_limits
@@ -17,6 +16,10 @@
 #include <algorithm> // std::min, std::max
 #include <utility> // std::index_sequence
 #include <cstring> // for std::memcpy
+
+#if __STDC_HOSTED__
+  #include <cmath> // std::ceil, std::floor, std::trunc, std::round, std::rint, std::sqrt
+#endif
 
 #include <xvec/detail/config.hpp>
 #include <xvec/detail/utilities.hpp>
@@ -1552,6 +1555,10 @@ template<vec_floating_point _Vp>
 constexpr _Vp rcp(generic_tag, const _Vp& x)
   { return std::uint8_t(1) / x; }
 
+enum class RoundOp{CEIL, FLOOR, TRUNC, ROUND, RINT};
+
+#if __STDC_HOSTED__
+
 template<vec_floating_point _Vp>
 constexpr _Vp sqrt(generic_tag, const _Vp& x) {
   using _Tp = typename _Vp::value_type;
@@ -1564,8 +1571,6 @@ constexpr _Vp sqrt(generic_tag, const _Vp& x) {
 template<vec_floating_point _Vp>
 constexpr _Vp rsqrt(generic_tag, const _Vp& x)
   { return std::uint8_t(1) / sqrt(x); }
-
-enum class RoundOp{CEIL, FLOOR, TRUNC, ROUND, RINT};
 
 template<RoundOp _Op, vec_floating_point _Vp>
 constexpr _Vp round_op(generic_tag, const _Vp& v)
@@ -1585,6 +1590,8 @@ constexpr _Vp round_op(generic_tag, const _Vp& v)
   else
     return _Vp([=](auto i) { return typename _Vp::value_type(doOp(v[i])); });
 }
+
+#endif // __STDC_HOSTED__
 
 } // namespace detail
 
