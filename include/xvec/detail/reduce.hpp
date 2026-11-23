@@ -50,7 +50,7 @@ constexpr auto choose_identity_element() {
 /// size, the incoming argument can remain a simd register.
 /// \internal
 template<simd_size_type _Size, typename _Tp, typename _Abi, binary_reduction_fn<_Tp> _BinaryFn>
-inline _Tp reduce_helper(const basic_vec<_Tp, _Abi>& v, _BinaryFn binop) {
+constexpr _Tp reduce_helper(const basic_vec<_Tp, _Abi>& v, _BinaryFn binop) {
 
   if constexpr (_Size == 1)
     return v[0];

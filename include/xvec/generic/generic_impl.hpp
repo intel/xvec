@@ -1088,6 +1088,17 @@ saturating_cast(generic_tag, const _From& input) noexcept
   return rebind_cast<_To>(value);
 }
 
+/// @brief Compute the inner product of two FP16 vectors, accumulated in FP32.
+/// The inputs are widened to FP32 before multiplying to improve precision.
+/// @tparam _Vp The FP16 vec type.
+/// @param lhs The first vector.
+/// @param rhs The second vector.
+/// @param init The value added to the sum of products.
+/// @return init plus the sum of lhs[i] * rhs[i].
+template<vec_of<_Float16> _Vp>
+constexpr float inner_product(generic_tag, const _Vp& lhs, const _Vp& rhs, float init)
+  { return init + reduce(rebind_cast<float>(lhs) * rebind_cast<float>(rhs)); }
+
 template<typename _Vendor, typename _Tp, typename _Abi>
 constexpr basic_vec<_Tp, _Abi> byteswap(_Vendor, const basic_vec<_Tp, _Abi>& x) noexcept {
 
