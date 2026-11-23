@@ -43,7 +43,13 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(CheckExceptionOnMaskedLoadStoreRangeError, TypePar
   {
     auto m = typename TypeParam::mask_type([](auto idx) { return idx % 2 == 0; });
 
-    BOOST_CHECK_THROW((void)xvec::simd::unchecked_load<TypeParam>(smallRange, m), std::out_of_range);
+    BOOST_CHECK_EXCEPTION((void)xvec::simd::unchecked_load<TypeParam>(smallRange, m),
+                          std::out_of_range, [](const std::out_of_range& error) {
+      const std::string message = error.what();
+      return message.find("load") != std::string::npos &&
+             message.find("Range size:2") != std::string::npos &&
+             message.find("Mask:") != std::string::npos;
+    });
     BOOST_CHECK_THROW((void)xvec::simd::unchecked_store(xvec::simd::iota<TypeParam>, smallRange, m), std::out_of_range);
 
     // Check that masked load/store don't throw an exception if the mask itself is used to limit their scope.
@@ -57,20 +63,25 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(CheckExceptionOnGatherScatterRangeError, TypeParam
 {
   // Very small range to use for checking. Part of a bigger span to prevent
   // segfault if this doesn't work.
-  std::array<typename TypeParam::value_type, 10> r;
-  auto smallRange = std::span(r.begin(), 2);
+  std::array<typename TypeParam::value_type, 10> r{};
+  auto smallRange = std::span(r.begin() + 1, 2);
 
   xvec::simd::vec<int, TypeParam::size> invalidIndexes(5);
   BOOST_CHECK_THROW((void)xvec::simd::unchecked_gather_from(smallRange, invalidIndexes), std::out_of_range);
   BOOST_CHECK_THROW((void)xvec::simd::unchecked_scatter_to(xvec::simd::iota<TypeParam>, smallRange, invalidIndexes), std::out_of_range);
+
+  // A valid positive index must not hide a negative index from the check.
+  const xvec::simd::vec<int, TypeParam::size> mixedIndexes([](auto i) { return i == 0 ? -1 : 1; });
+  BOOST_CHECK_THROW((void)xvec::simd::unchecked_gather_from(smallRange, mixedIndexes), std::out_of_range);
+  BOOST_CHECK_THROW((void)xvec::simd::unchecked_scatter_to(xvec::simd::iota<TypeParam>, smallRange, mixedIndexes), std::out_of_range);
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(CheckExceptionOnMaskedGatherScatterRangeError, TypeParam, LoadableSimdTypes)
 {
   // Very small range to use for checking. Part of a bigger span to prevent
   // segfault if this doesn't work.
-  std::array<typename TypeParam::value_type, 10> r;
-  auto smallRange = std::span(r.begin(), 2);
+  std::array<typename TypeParam::value_type, 10> r{};
+  auto smallRange = std::span(r.begin() + 1, 2);
 
   auto m = xvec::simd::mask<int, TypeParam::size>([](auto idx) { return idx % 2 == 0; });
 
@@ -87,4 +98,13 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(CheckExceptionOnMaskedGatherScatterRangeError, Typ
   unchecked_gather_from(smallRange, invalidIndexMask, iotaIndexes); // Should run without exception
   unchecked_scatter_to(xvec::simd::iota<TypeParam>, smallRange, invalidIndexMask, iotaIndexes); // Should run without exception
 
+  const xvec::simd::vec<int, TypeParam::size> mixedIndexes([](auto i) { return i == 0 ? -1 : 1; });
+  const auto positiveOnly = mixedIndexes >= 0;
+  BOOST_CHECK_NO_THROW(unchecked_gather_from(smallRange, positiveOnly, mixedIndexes));
+  BOOST_CHECK_NO_THROW(unchecked_scatter_to(xvec::simd::iota<TypeParam>, smallRange, positiveOnly, mixedIndexes));
+
+  const auto empty = smallRange.first(0);
+  const typename decltype(mixedIndexes)::mask_type emptyMask(false);
+  BOOST_CHECK_NO_THROW(unchecked_gather_from(empty, emptyMask, mixedIndexes));
+  BOOST_CHECK_NO_THROW(unchecked_scatter_to(xvec::simd::iota<TypeParam>, empty, emptyMask, mixedIndexes));
 }
