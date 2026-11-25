@@ -18,6 +18,53 @@
 namespace _XVEC_NAMESPACE::simd
 {
 
+namespace detail {
+  template<vec_fundamental_integer _V, fundamental_integer _S>
+  constexpr auto broadcast_shift_count(_S s) noexcept {
+    using _T = typename _V::value_type;
+    using _Count = std::conditional_t<std::is_signed_v<_S>, std::make_signed_t<_T>, std::make_unsigned_t<_T>>;
+    // For uint8_t elements, 256u saturates to 255 (still overlong) rather than wrapping to 0.
+    // A signed count of -1 stays signed: shl must shift right even when the elements are unsigned.
+    return rebind_t<_Count, _V>(saturating_cast<_Count>(s));
+  }
+}
+
+/**
+ * @defgroup cpp29_p3793 C++29 proposal: Better shifting
+ * @brief Negative counts reverse direction; overlong shifts produce zero or sign fill.
+ *
+ * @see https://wg21.link/P3793R1
+ * @{
+ */
+
+/// @brief Shift each element left by its count, shifting right for negative counts.
+template<vec_fundamental_integer _V, vec_fundamental_integer _S>
+  requires (_V::size() == _S::size() &&
+            sizeof(typename _V::value_type) == sizeof(typename _S::value_type))
+constexpr _V shl(const _V& v, const _S& s) noexcept {
+  if (std::is_constant_evaluated()) return _V([&](auto i) { return detail::shl(v[i], s[i]); });
+  return detail::shift_elements<true>(target, v, s);
+}
+
+/// @brief Shift every element left by a shared count.
+template<vec_fundamental_integer _V, detail::fundamental_integer _S>
+constexpr _V shl(const _V& v, _S s) noexcept {return shl(v, detail::broadcast_shift_count<_V>(s)); }
+
+/// @brief Shift each element right by its count, shifting left for negative counts.
+template<vec_fundamental_integer _V, vec_fundamental_integer _S>
+  requires (_V::size() == _S::size() &&
+            sizeof(typename _V::value_type) == sizeof(typename _S::value_type))
+constexpr _V shr(const _V& v, const _S& s) noexcept {
+  if (std::is_constant_evaluated()) return _V([&](auto i) { return detail::shr(v[i], s[i]); });
+  return detail::shift_elements<false>(target, v, s);
+}
+
+/// @brief Shift every element right by a shared count.
+template<vec_fundamental_integer _V, detail::fundamental_integer _S>
+constexpr _V shr(const _V& v, _S s) noexcept { return shr(v, detail::broadcast_shift_count<_V>(s)); }
+
+/// @} cpp29_p3793
+
 /**
  * @defgroup cpp26_bit C++26: Bit manipulation
  * @brief Element-wise bit counting, rotation, power-of-two, and byte-order operations.
@@ -320,6 +367,8 @@ namespace _XVEC_NAMESPACE
   using simd::bit_floor;
   using simd::bit_ceil;
   using simd::has_single_bit;
+  using simd::shl;
+  using simd::shr;
   using simd::rotl;
   using simd::rotr;
   using simd::bit_width;

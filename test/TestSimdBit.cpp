@@ -355,6 +355,71 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(BitReverse, TypeParam, UnsignedSimdTypes)
 }
 
 template<typename T>
+constexpr auto shiftBoundaryCounts()
+{
+  using S = std::make_signed_t<T>;
+  constexpr int width = std::numeric_limits<std::make_unsigned_t<T>>::digits;
+
+  // Mix directions and straddle the element width. The signed minimum also catches unsafe negation.
+  return std::array<S, 10>{std::numeric_limits<S>::min(), -width, 1 - width, -1, 0, 1,
+                           width - 1, width, width + 1, std::numeric_limits<S>::max()};
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(BetterShiftWithSimdCounts, TypeParam, IntegerSimdTypes)
+{
+  namespace simd = xvec::simd;
+  using T = typename TypeParam::value_type;
+  const auto v = GetRandomVector<TypeParam>(std::numeric_limits<T>::max());
+  auto check = [&]<typename S>(const simd::vec<S, TypeParam::size()>& counts) {
+    const auto left = applyBinaryToArray(v, counts, simd::detail::shl<T, S>);
+    const auto right = applyBinaryToArray(v, counts, simd::detail::shr<T, S>);
+    BOOST_TEST(to_array(simd::shl(v, counts)) == left, boost::test_tools::per_element());
+    BOOST_TEST(to_array(simd::shr(v, counts)) == right, boost::test_tools::per_element());
+  };
+
+  using S = std::make_signed_t<T>;
+  using U = std::make_unsigned_t<T>;
+  constexpr auto offsets = shiftBoundaryCounts<T>();
+  auto offset = [&](auto i) { return offsets[i % offsets.size()]; };
+  check(simd::rebind_t<S, TypeParam>(offset));
+  // Negative offsets become large forward shifts when interpreted as unsigned.
+  check(simd::rebind_t<U, TypeParam>([&](auto i) { return U(offset(i)); }));
+}
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(BetterShiftWithScalarCount, TypeParam, IntegerSimdTypes)
+{
+  namespace simd = xvec::simd;
+  using T = typename TypeParam::value_type;
+  const TypeParam v([](auto i) { return T(i % 2 ? 3 : -7); });
+  auto checkScalar = [&](auto s) {
+    const auto left = applyUnaryToArray(v, [s](T x) { return simd::detail::shl(x, s); });
+    const auto right = applyUnaryToArray(v, [s](T x) { return simd::detail::shr(x, s); });
+    BOOST_TEST(to_array(simd::shl(v, s)) == left, boost::test_tools::per_element());
+    BOOST_TEST(to_array(simd::shr(v, s)) == right, boost::test_tools::per_element());
+  };
+  for (auto s : shiftBoundaryCounts<T>()) checkScalar(s);
+
+  // A plain narrowing cast could turn either of these shared counts into zero before broadcast.
+  checkScalar(1ULL << 32);
+  checkScalar(std::numeric_limits<long long>::min());
+}
+
+BOOST_AUTO_TEST_CASE(BetterShiftBoundaries)
+{
+  namespace detail = xvec::simd::detail;
+  static_assert(detail::shl(std::int8_t{-7}, -1) == -4);
+  static_assert(detail::shl(std::uint8_t{1}, 8) == 0);
+  static_assert(detail::shr(-1, 1ULL << 32) == -1);
+  static_assert(detail::shr(1, std::numeric_limits<int>::min()) == 0);
+#if defined(_XVEC_HAS_CONSTEXPR)
+  constexpr xvec::simd::vec<int, 2> v(-7);
+  constexpr xvec::simd::vec<int, 2> counts([](auto i) { return i == 0 ? -1 : 32; });
+  static_assert(to_array(xvec::shl(v, counts)) == std::array{-4, 0});
+  static_assert(to_array(xvec::shr(v, counts)) == std::array{-14, -1});
+#endif
+}
+
+template<typename T>
 class SimdRotateFixture
 {
 public:

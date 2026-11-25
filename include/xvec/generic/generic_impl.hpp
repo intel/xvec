@@ -945,6 +945,44 @@ constexpr auto conj(generic_tag, const _Vp& v) {
   return simd_bit_cast<typename _Vp::value_type>(t);
 }
 
+template<bool _Left, vec_fundamental_integer _Vp, vec_fundamental_integer _Sp>
+constexpr _Vp shift_elements(generic_tag, const _Vp& v, const _Sp& s) noexcept
+{
+  using _T = typename _Vp::value_type;
+  using _S = typename _Sp::value_type;
+  using _U = std::make_unsigned_t<_T>;
+  constexpr _U width = std::numeric_limits<_U>::digits;
+
+  // Work out the shift count.
+  auto count = simd_bit_cast<_U>(s);
+  if constexpr (fundamental_signed_integer<_S>)
+    count = select(s < _Sp{}, -count, count); // Unsigned magnitude also represents abs(min).
+
+  // Mask the offset so the shift itself is valid even when select discards its result.
+  const auto in_range = count < width;
+  const rebind_t<_U, _Vp> max_offset(_U(width - 1));
+  const auto offset = simd_bit_cast<_T>(count & max_offset);
+
+  // Left shift is easy.
+  const auto left = select(in_range, v << offset, _Vp{});
+
+  // Right shift is more complicated because of the need to fill with sign bits
+  // for overshifts.
+  const auto right = [&] {
+    if constexpr (fundamental_signed_integer<_T>)
+      return v >> simd_bit_cast<_T>(min(count, max_offset));
+    else
+      return select(in_range, v >> offset, _Vp{});
+  }();
+
+  // Choose which result to use based upon the combination of shift direction
+  // and the sign of the count.
+  if constexpr (fundamental_signed_integer<_S>)
+    return select(_Left ? s >= _Sp{} : s < _Sp{}, left, right);
+  else
+    return _Left ? left : right;
+}
+
 ///@{
 /// @brief Rotation (circular shift) operations where bits are shifted off one
 /// end of each element and inserted at the other end.
