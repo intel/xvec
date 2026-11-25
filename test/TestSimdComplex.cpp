@@ -337,3 +337,49 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SetImag, TypeParam, ComplexSimdTypes)
   computed.imag(realValues); // real as in non-complex, not going into `real'.
   BOOST_SIMD_EQUAL(computed, expected);
 }
+
+// A user-defined complex-like type, enabled through complex_traits.
+struct MyComplex {
+  float re, im;
+  constexpr MyComplex() = default;
+  constexpr MyComplex(float r, float i) : re(r), im(i) {}
+  constexpr MyComplex(float r) : re(r), im(0) {}
+  constexpr float real() const { return re; }
+  constexpr float imag() const { return im; }
+  friend constexpr bool operator==(const MyComplex&, const MyComplex&) = default;
+  friend constexpr MyComplex operator*(const MyComplex& l, const MyComplex& r)
+    { return {l.re * r.re - l.im * r.im, l.re * r.im + l.im * r.re}; }
+};
+
+template<> struct xvec::simd::complex_traits<MyComplex> { using value_type = float; };
+
+static_assert(xvec::simd::detail::complex_number<MyComplex>);
+static_assert(std::is_same_v<xvec::simd::detail::complex_element_type<MyComplex>, float>);
+
+BOOST_AUTO_TEST_CASE(UserDefinedComplex)
+{
+  using V = xvec::simd::vec<MyComplex, 4>;
+  using R = xvec::simd::vec<float, 4>;
+  const V a([](auto i) { return MyComplex(float(i) + 1, float(i) * 2 - 3); });
+  const V b([](auto i) { return MyComplex(float(i) * 0.5f, 7 - float(i)); });
+  const V c([](auto i) { return MyComplex(float(i), 1); });
+
+  BOOST_TEST((a[2] == MyComplex(3, 1)));
+  BOOST_SIMD_EQUAL(a.real(), R([](auto i) { return float(i) + 1; }));
+  BOOST_SIMD_EQUAL(a.imag(), R([](auto i) { return float(i) * 2 - 3; }));
+  BOOST_TEST(xvec::simd::all_of(xvec::conj(a).imag() == -a.imag()));
+  BOOST_TEST(xvec::simd::all_of(a == a));
+  BOOST_TEST(xvec::simd::none_of(a == b));
+
+  const auto prod = a * b;
+  const auto fused = xvec::fma(a, b, c);
+  for (int i = 0; i != 4; ++i) {
+    const auto ea = std::complex<float>(a[i].re, a[i].im);
+    const auto eb = std::complex<float>(b[i].re, b[i].im);
+    const auto ec = std::complex<float>(c[i].re, c[i].im);
+    const auto ep = ea * eb;
+    const auto ef = ep + ec;
+    BOOST_TEST(prod[i].re == ep.real()); BOOST_TEST(prod[i].im == ep.imag());
+    BOOST_TEST(fused[i].re == ef.real()); BOOST_TEST(fused[i].im == ef.imag());
+  }
+}

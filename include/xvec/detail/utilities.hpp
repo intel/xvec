@@ -31,6 +31,14 @@ using simd_size_type = int;
 /// An alias for a compile time size constant.
 template <simd_size_type _Np> using size_constant = std::integral_constant<simd_size_type, _Np>;
 
+/// Customisation point declaring a type to be complex-like. Specialise it with a
+/// `value_type` member naming the type of the real and imaginary components. The
+/// complex type must be trivially copyable, have the layout of two consecutive
+/// components (real first), be constructible from (real, imag), and provide real() and imag() const member functions.
+/// @note This is an xvec extension since the C++26 draft only requires std::complex.
+template<typename _Tp> struct complex_traits {};
+template<typename _Tp> struct complex_traits<std::complex<_Tp>> { using value_type = _Tp; };
+
 namespace detail
 {
 
@@ -48,9 +56,18 @@ inline constexpr bool isLlvm = false;
 template<class... Ts> struct target_overloads : Ts... { using Ts::operator()...; };
 template<class... Ts> target_overloads(Ts...) -> target_overloads<Ts...>;
 
-/// Detect whether a given type is std::complex
+/// Detect whether a given type is complex-like (i.e. has a complex_traits
+/// specialisation).
 template <typename _Tp>
-concept complex_number = std::is_same_v<std::remove_cvref_t<_Tp>, std::complex<typename _Tp::value_type>>;
+concept complex_number = requires { typename complex_traits<std::remove_cvref_t<_Tp>>::value_type; };
+
+/// Get the value type of a complex type. If used for a non-complex type it will
+/// return a dummy type.
+///@{
+template<typename _Tp> struct complex_element_type_query { struct value_type {}; }; // Dummy value type.
+template<complex_number _Tp> struct complex_element_type_query<_Tp> { using value_type = typename complex_traits<std::remove_cvref_t<_Tp>>::value_type; };
+template<typename _Tp> using complex_element_type = typename complex_element_type_query<_Tp>::value_type;
+///@}
 
 /// Small helper: is T the same (after cvref-stripping) as any of Us...?
 /// Used by mask_operator and other "T must be one of these" concepts.
@@ -69,16 +86,8 @@ concept fundamental_unsigned_integer = any_same_v<_Tp,
 /// user-defined types it will be the defined storage type.
 ///@{
 template<typename _Tp> struct element_type { using value_type = _Tp; };
-template<complex_number _Tp> struct element_type<_Tp> { using value_type = typename _Tp::value_type; };
+template<complex_number _Tp> struct element_type<_Tp> { using value_type = complex_element_type<_Tp>; };
 template<typename _Tp> using element_type_t = typename element_type<_Tp>::value_type;
-///@}
-
-/// Get the value type of a complex type. If used for a non-complex type it will
-/// return a dummy type.
-///@{
-template<typename _Tp> struct complex_element_type_query { struct value_type {}; }; // Dummy value type.
-template<complex_number _Tp> struct complex_element_type_query<_Tp> { using value_type = typename _Tp::value_type; };
-template<typename _Tp> using complex_element_type = typename complex_element_type_query<_Tp>::value_type;
 ///@}
 
 /// Compile time query to determine whether the given type is a half-precision
@@ -161,7 +170,7 @@ template <typename _Tp> inline constexpr simd_size_type max_fixed_size = 128;
 /// else is mapped to a raw container.
 ///@{
 template<typename _Tp> struct element_storage { using value_type = container_for_type<_Tp>; };
-template<complex_number _Tp> struct element_storage<_Tp> { using value_type = typename _Tp::value_type; };
+template<complex_number _Tp> struct element_storage<_Tp> { using value_type = complex_element_type<_Tp>; };
 template<typename _Tp> requires (std::is_enum_v<_Tp>) struct element_storage<_Tp> { using value_type = std::underlying_type_t<_Tp>; };
 template<typename _Tp> requires (std::is_arithmetic_v<_Tp> || is_floating_point_v<_Tp>) struct element_storage<_Tp> { using value_type = _Tp; };
 template<typename _Tp> using element_storage_t = typename element_storage<_Tp>::value_type;

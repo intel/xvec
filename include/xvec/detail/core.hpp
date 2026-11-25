@@ -118,9 +118,9 @@ inline constexpr bool value_preserving_convertible_to_v = []{
     return true;
   else if constexpr (complex_number<BareTo>)
   {
-    using ToComponent = typename BareTo::value_type;
+    using ToComponent = complex_element_type<BareTo>;
     if constexpr (complex_number<BareFrom>)
-      return value_preserving_convertible_to_v<typename BareFrom::value_type, ToComponent>;
+      return value_preserving_convertible_to_v<complex_element_type<BareFrom>, ToComponent>;
     else
       return value_preserving_convertible_to_v<BareFrom, ToComponent>;
   }
@@ -189,7 +189,7 @@ template<typename _Tp>
 concept builtin_vectorizable =
   simple_vectorizable<_Tp>
   || extended_vectorizable<_Tp>
-  || (complex_number<_Tp> && simple_vectorizable<typename _Tp::value_type>);
+  || (complex_number<_Tp> && simple_vectorizable<complex_element_type<_Tp>>);
 
 /// Trait-based form of vectorization concept.
 /// \ingroup cpp29_p2964

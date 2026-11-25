@@ -600,14 +600,14 @@ public:
   /// @brief Return the real components of the complex elements.
   /// @return A real-valued vector with the same number of elements.
   constexpr real_type real() const noexcept requires (vec_complex<basic_vec>) {
-    const auto e = simd_bit_cast<typename _Tp::value_type>(*this);
+    const auto e = simd_bit_cast<detail::complex_element_type<_Tp>>(*this);
     return permute<size>(e, [](simd_size_type idx) { return idx * 2; });
   };
 
   /// @brief Return the imaginary components of the complex elements.
   /// @return A real-valued vector with the same number of elements.
   constexpr real_type imag() const noexcept requires (vec_complex<basic_vec>) {
-    const auto e = simd_bit_cast<typename _Tp::value_type>(*this);
+    const auto e = simd_bit_cast<detail::complex_element_type<_Tp>>(*this);
     return permute<size>(e, [](simd_size_type idx) { return idx * 2 + 1; });
   };
 
