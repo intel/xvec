@@ -385,12 +385,12 @@ void TestConcepts()
   static_assert(!xvec::simd::vec_unsigned_integral<scolours>);
 
   // Unsigned integer (specifically fundamental integers, not integrals)
-  static_assert(!xvec::simd::vec_unsigned_integer<sf>);
-  static_assert(!xvec::simd::vec_unsigned_integer<shf>);
-  static_assert(!xvec::simd::vec_unsigned_integer<sint>);
-  static_assert(xvec::simd::vec_unsigned_integer<suint>);
-  static_assert(!xvec::simd::vec_unsigned_integer<scmplx>);
-  static_assert(!xvec::simd::vec_unsigned_integer<scolours>);
+  static_assert(!xvec::simd::vec_fundamental_unsigned_integer<sf>);
+  static_assert(!xvec::simd::vec_fundamental_unsigned_integer<shf>);
+  static_assert(!xvec::simd::vec_fundamental_unsigned_integer<sint>);
+  static_assert(xvec::simd::vec_fundamental_unsigned_integer<suint>);
+  static_assert(!xvec::simd::vec_fundamental_unsigned_integer<scmplx>);
+  static_assert(!xvec::simd::vec_fundamental_unsigned_integer<scolours>);
 
   // Arithmetic
   static_assert(xvec::simd::vec_arithmetic<sf>);

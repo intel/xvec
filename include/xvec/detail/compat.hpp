@@ -15,6 +15,7 @@
 #include <utility>
 
 #include <xvec/detail/config.hpp>
+#include <xvec/detail/utilities.hpp>
 
 /// Detect a scoped enum. This will be provided in C++23 onwards.
 #if defined(__cpp_lib_is_scoped_enum) && (__cpp_lib_is_scoped_enum >= 202011L)
@@ -186,20 +187,12 @@ struct bit_rshift<void> {
   using is_transparent = void;
 };
 
-template<typename _Tp>
-concept funnel_shift_source =
-  std::same_as<std::remove_cvref_t<_Tp>, unsigned char> ||
-  std::same_as<std::remove_cvref_t<_Tp>, unsigned short> ||
-  std::same_as<std::remove_cvref_t<_Tp>, unsigned int> ||
-  std::same_as<std::remove_cvref_t<_Tp>, unsigned long> ||
-  std::same_as<std::remove_cvref_t<_Tp>, unsigned long long>;
-  
 /// funnel_shift_right(high, low, s)
 ///
 /// Preconditions: 0 <= s < N, where N = numeric_limits<T>::digits.
 /// Returns: (low >> r) | (high << ((N - r) % N)), where r = static_cast<unsigned>(s).
 /// Remark: funnel_shift_right(high, low, 0) returns low.
-template <funnel_shift_source T, std::integral S>
+template <fundamental_unsigned_integer T, std::integral S>
 [[nodiscard]] constexpr T funnel_shift_right(T high, T low, S s) noexcept {
     constexpr auto N = std::numeric_limits<T>::digits;
     assert(s >= 0 && static_cast<unsigned>(s) < static_cast<unsigned>(N));
@@ -213,7 +206,7 @@ template <funnel_shift_source T, std::integral S>
 /// Preconditions: 0 <= s < N, where N = numeric_limits<T>::digits.
 /// Returns: (high << r) | (low >> ((N - r) % N)), where r = static_cast<unsigned>(s).
 /// Remark: funnel_shift_left(high, low, 0) returns high.
-template <funnel_shift_source T, std::integral S>
+template <fundamental_unsigned_integer T, std::integral S>
 [[nodiscard]] constexpr T funnel_shift_left(T high, T low, S s) noexcept {
     constexpr auto N = std::numeric_limits<T>::digits;
     assert(s >= 0 && static_cast<unsigned>(s) < static_cast<unsigned>(N));
