@@ -814,15 +814,21 @@ scatter_to(x86_avx512_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
            const basic_vec<_Idx, _IdxAbi>& indexes, flags<_Flags...> flags)
 {
   auto ptr = std::ranges::data(r);
-  const auto rmax = std::int32_t(std::min(std::ranges::size(r), std::size_t(std::numeric_limits<_Idx>::max())));
+  const auto rmax = std::ranges::size(r);
 
   // Bind extra pointer and default mask parameters to the scatter lambda. Note
   // that a range check is added if necessary too.
   auto impl = [=](auto v, auto i) {
+    using Index32 = rebind_t<std::int32_t, decltype(i)>;
     if constexpr (contains_flag<detail::flag_unchecked>(flags))
-      scatterImpl(v, i, ptr, ~0ULL);
+      scatterImpl(v, Index32(i), ptr, ~0ULL);
     else
-      scatterImpl(v, i, ptr, (i >= 0 && i < rmax).to_register());
+    {
+      auto inRange = i >= _Idx(0);
+      if (std::cmp_less_equal(rmax, +std::numeric_limits<_Idx>::max()))
+        inRange &= i < static_cast<_Idx>(rmax);
+      scatterImpl(v, Index32(i), ptr, inRange.to_register());
+    }
   };
 
   if constexpr (contains_flag<flag_unchecked>(flags))
@@ -830,8 +836,7 @@ scatter_to(x86_avx512_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
 
   // All scatter instructions can be made to use 32-bit indexes.
   // :TODO: A special case might be 64-bit values using 64-bit indexes
-  auto indexAs32 = vec<std::int32_t, basic_vec<_Idx, _IdxAbi>::size>(indexes);
-  chunked_invoke<(int)basic_vec<_Tp>::size>(impl, vec_as_container(values), indexAs32);
+  chunked_invoke<(int)basic_vec<_Tp>::size>(impl, vec_as_container(values), indexes);
 }
 
 template<typename _Range, typename _Tp, typename _TpAbi, typename _Idx, typename _IdxAbi, typename... _Flags>

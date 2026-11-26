@@ -13,3 +13,4 @@ This page documents the version history and changes for the **xvec** library.
 - Added `xvec::simd::x86::dpphps(a, b, acc)`, a width-independent wrapper for the Intel AVX10 `VDPPHPS` instruction. Each FP16 input must have exactly two elements per FP32 accumulator element. Callers choose how to handle an unpaired element.
 - Added `inner_product(lhs, rhs, init)` to compute the inner product of FP16 vectors of any size. The FP16 inputs are widened and accumulated in FP32 to improve precision. It uses the Intel AVX10 FP16 dot-product instruction on supported targets, or falls back to a generic version for older targets.
 - Added SIMD `shl` and `shr` ([P3793R1](https://wg21.link/P3793R1)) with scalar or per-element shift counts. Negative counts reverse direction, and overlong shifts produce zero or sign fill.
+- Fixed AVX-512 scatter truncating 64-bit indexes, which could write to the wrong element even when using `partial_scatter_to`.
