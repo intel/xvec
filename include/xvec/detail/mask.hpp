@@ -296,7 +296,7 @@ public:
       constexpr auto numOutputBits = std::numeric_limits<unsigned long long>::digits;
 
       if (any_of(*this) && reduce_max_index(*this) >= numOutputBits)
-        throw "Mask has set bits which won't be copied into the output ullong";
+        __builtin_trap();
 
       unsigned long long result = 0;
       for (simd_size_type i = 0; i < std::min(size(), numOutputBits); ++i)

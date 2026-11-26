@@ -82,11 +82,17 @@ enable_testing()
 
 add_library(FreestandingInclude OBJECT EXCLUDE_FROM_ALL freestanding/include.cpp)
 target_include_directories(FreestandingInclude PRIVATE "${XVEC_ROOT_DIR}/include")
-target_compile_options(FreestandingInclude PRIVATE -ffreestanding)
+target_compile_options(FreestandingInclude PRIVATE -ffreestanding -fno-exceptions -Wno-psabi -O1 -march=goldmont)
+add_custom_target(FreestandingCheckSymbols
+  COMMAND "${CMAKE_COMMAND}" "-DNM=${CMAKE_NM}" "-DOBJECT=$<TARGET_OBJECTS:FreestandingInclude>"
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/freestanding/check_symbols.cmake"
+  VERBATIM
+)
+add_dependencies(FreestandingCheckSymbols FreestandingInclude)
 add_test(
   NAME FreestandingInclude
   COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}"
-    --target FreestandingInclude --config $<CONFIG>
+    --target FreestandingCheckSymbols --config $<CONFIG>
 )
 
 # ── Test configuration ────────────────────────────────────────────────────────

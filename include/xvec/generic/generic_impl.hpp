@@ -127,7 +127,9 @@ template<mask_type _Mp> constexpr auto vec_as_container(const _Mp& m) { return v
 ///@{
 template<vec_or_mask_type _Vp>
 constexpr typename _Vp::value_type subscript(generic_tag, const _Vp& v, simd_size_type pos) {
+#if __STDC_HOSTED__
   assert(pos < _Vp::size());
+#endif
   auto t = detail::vec_as_container(v).to_builtin()[pos];
 
   if constexpr (vec_complex<_Vp>)
