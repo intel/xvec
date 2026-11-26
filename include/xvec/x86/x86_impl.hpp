@@ -779,91 +779,102 @@ constexpr auto gather_from(x86_avx2_tag, const _Range& r,
 
 #if defined(__AVX512F__)
 
-inline auto scatterImpl =
-  []<typename _Tp, typename _VT, typename _IT>(basic_vec<_Tp, _VT> v,
-                                               basic_vec<std::int32_t, _IT> idx, auto ptr, std::uint64_t m)
+/// Scatter a single register of values using a single register of 32- or 64-bit indexes.
+template<vec_type _Vp, vec_integral _Iv>
+inline void scatterImpl(const _Vp& v, const _Iv& idx, auto ptr, std::uint64_t m)
 {
-  constexpr std::uint64_t justMaskBits = (1ULL << basic_vec<_Tp, _VT>::size()) - 1;
+  using _Tp = typename _Vp::value_type;
+  using _IW = typename _Iv::value_type;
+  static_assert(sizeof(_IW) == 4 || sizeof(_IW) == 8);
+  constexpr std::uint64_t justMaskBits = (1ULL << _Vp::size()) - 1;
   const std::uint64_t nm = justMaskBits & m;
 
   constexpr bool isTp32 = (sizeof(_Tp) == 4);
 
-  if constexpr (xmm_register<basic_vec<_Tp, _VT>>)
+  // The instruction family is selected by the wider of the values and indexes.
+  constexpr std::size_t bytes = _Vp::size() * std::max(sizeof(_Tp), sizeof(_IW));
+
+  if constexpr (sizeof(_IW) == 4)
   {
-    if constexpr (isTp32) _mm_mask_i32scatter_epi32(ptr, nm, idx.to_register(), v.to_register(), 4);
-    else                  _mm_mask_i32scatter_epi64(ptr, nm, idx.to_register(), v.to_register(), 8);
-  }
-  else if constexpr (ymm_register<basic_vec<_Tp, _VT>>)
-  {
-    if constexpr (isTp32) _mm256_mask_i32scatter_epi32(ptr, nm, idx.to_register(), v.to_register(), 4);
-    else                  _mm256_mask_i32scatter_epi64(ptr, nm, idx.to_register(), v.to_register(), 8);
+    if constexpr (bytes <= 16)
+    {
+      if constexpr (isTp32) _mm_mask_i32scatter_epi32(ptr, nm, idx.to_register(), v.to_register(), 4);
+      else                  _mm_mask_i32scatter_epi64(ptr, nm, idx.to_register(), v.to_register(), 8);
+    }
+    else if constexpr (bytes <= 32)
+    {
+      if constexpr (isTp32) _mm256_mask_i32scatter_epi32(ptr, nm, idx.to_register(), v.to_register(), 4);
+      else                  _mm256_mask_i32scatter_epi64(ptr, nm, idx.to_register(), v.to_register(), 8);
+    }
+    else
+    {
+      if constexpr (isTp32) _mm512_mask_i32scatter_epi32(ptr, nm, idx.to_register(), v.to_register(), 4);
+      else                  _mm512_mask_i32scatter_epi64(ptr, nm, idx.to_register(), v.to_register(), 8);
+    }
   }
   else
   {
-    if constexpr (isTp32) _mm512_mask_i32scatter_epi32(ptr, nm, idx.to_register(), v.to_register(), 4);
-    else                  _mm512_mask_i32scatter_epi64(ptr, nm, idx.to_register(), v.to_register(), 8);
+    if constexpr (bytes <= 16)
+    {
+      if constexpr (isTp32) _mm_mask_i64scatter_epi32(ptr, nm, idx.to_register(), v.to_register(), 4);
+      else                  _mm_mask_i64scatter_epi64(ptr, nm, idx.to_register(), v.to_register(), 8);
+    }
+    else if constexpr (bytes <= 32)
+    {
+      if constexpr (isTp32) _mm256_mask_i64scatter_epi32(ptr, nm, idx.to_register(), v.to_register(), 4);
+      else                  _mm256_mask_i64scatter_epi64(ptr, nm, idx.to_register(), v.to_register(), 8);
+    }
+    else
+    {
+      if constexpr (isTp32) _mm512_mask_i64scatter_epi32(ptr, nm, idx.to_register(), v.to_register(), 4);
+      else                  _mm512_mask_i64scatter_epi64(ptr, nm, idx.to_register(), v.to_register(), 8);
+    }
   }
-};
+}
 
-/// Scatter the contents of a vec value into the supplied memory at the given index positions.
-template<typename _Range, typename _Tp, typename _TpAbi, typename _Idx, typename _IdxAbi, typename... _Flags>
-requires (sizeof(_Tp) == 4 || sizeof(_Tp) == 8) // Only 32/64-bit writes are natively supported in x86. For smaller or larger elements the
-                                                // generic loop implementation is faster.
+/// Scatter the contents of a vec value into the supplied memory at the index positions enabled by the mask.
+template<typename _Range, vec_type _Vp, vec_integral _Idx, typename... _Flags>
+requires (sizeof(typename _Vp::value_type) == 4 || sizeof(typename _Vp::value_type) == 8) // Only 32/64-bit writes are natively supported in x86. For smaller or larger elements the
+                                                                                          // generic loop implementation is faster.
 constexpr void
-scatter_to(x86_avx512_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
-           const basic_vec<_Idx, _IdxAbi>& indexes, flags<_Flags...> flags)
+scatter_to(x86_avx512_tag, const _Vp& values, _Range&& r,
+           const typename _Idx::mask_type& mask,
+           const _Idx& indexes, flags<_Flags...> flags)
 {
+  using _Tp = typename _Vp::value_type;
+  using _IdxT = typename _Idx::value_type;
   auto ptr = std::ranges::data(r);
   const auto rmax = std::ranges::size(r);
 
-  // Bind extra pointer and default mask parameters to the scatter lambda. Note
-  // that a range check is added if necessary too.
-  auto impl = [=](auto v, auto i) {
-    using Index32 = rebind_t<std::int32_t, decltype(i)>;
-    if constexpr (contains_flag<detail::flag_unchecked>(flags))
-      scatterImpl(v, Index32(i), ptr, ~0ULL);
-    else
-    {
-      auto inRange = i >= _Idx(0);
-      if (std::cmp_less_equal(rmax, +std::numeric_limits<_Idx>::max()))
-        inRange &= i < static_cast<_Idx>(rmax);
-      scatterImpl(v, Index32(i), ptr, inRange.to_register());
-    }
-  };
-
-  if constexpr (contains_flag<flag_unchecked>(flags))
-   checkStaticMemoryBounds("scatter", indexes, rmax);
-
-  // All scatter instructions can be made to use 32-bit indexes.
-  // :TODO: A special case might be 64-bit values using 64-bit indexes
-  chunked_invoke<(int)basic_vec<_Tp>::size>(impl, vec_as_container(values), indexes);
-}
-
-template<typename _Range, typename _Tp, typename _TpAbi, typename _Idx, typename _IdxAbi, typename... _Flags>
-requires (sizeof(_Tp) == 4 || sizeof(_Tp) == 8) // Only 32/64-bit writes are natively supported in x86. For smaller or larger elements the
-                                                 // generic loop implementation is faster.
-constexpr void
-scatter_to(x86_avx512_tag, const basic_vec<_Tp, _TpAbi>& values, _Range&& r,
-           const typename basic_vec<_Idx, _IdxAbi>::mask_type& mask,
-           const basic_vec<_Idx, _IdxAbi>& indexes, flags<_Flags...> flags)
-{
-  auto ptr = std::ranges::data(r);
-
   // Range check if required.
-  const auto rmax = _Idx(std::min(std::ranges::size(r), std::size_t(std::numeric_limits<_Idx>::max())));
-  auto rangeCheckedMask =
-    contains_flag<detail::flag_unchecked>(flags) ? mask : (indexes >= _Idx(0) && indexes < rmax) && mask;
-
-  if constexpr (contains_flag<flag_unchecked>(flags))
+  auto rangeCheckedMask = mask;
+  if constexpr (!contains_flag<detail::flag_unchecked>(flags))
+  {
+    rangeCheckedMask = rangeCheckedMask && (indexes >= _IdxT(0));
+    if (std::cmp_less_equal(rmax, +std::numeric_limits<_IdxT>::max()))
+      rangeCheckedMask = rangeCheckedMask && (indexes < static_cast<_IdxT>(rmax));
+  }
+  else
     checkStaticMemoryBounds("scatter", indexes, rmax, mask);
 
   // Bind an extra pointer parameter to the scatter lambda
   auto impl = [=](auto v, auto i, auto m) { scatterImpl(v, i, ptr, m.to_ullong()); };
 
-  // All scatter instructions can be made to use 32-bit indexes.
-  // :TODO: A special case might be 64-bit values using 64-bit indexes
-  auto indexAs32 = vec<std::int32_t, basic_vec<_Idx, _IdxAbi>::size>(indexes);
-  chunked_invoke<(int)basic_vec<_Tp>::size()>(impl, vec_as_container(values), indexAs32, rangeCheckedMask);
+  // Indexes are widened to at least 32 bits, but 64-bit indexes are used directly.
+  using _IW = std::conditional_t<(sizeof(_IdxT) >= 8), std::int64_t, std::int32_t>;
+  auto indexAsHW = vec<_IW, _Idx::size()>(indexes);
+  // Use the largest chunk for which neither the values nor the indexes need more than one register.
+  constexpr int chunk = std::min<int>(vec<_Tp>::size(), vec<_IW>::size());
+  chunked_invoke<chunk>(impl, vec_as_container(values), indexAsHW, rangeCheckedMask);
+}
+
+/// Scatter the contents of a vec value into the supplied memory at the given index positions.
+template<typename _Range, vec_type _Vp, vec_integral _Idx, typename... _Flags>
+requires (sizeof(typename _Vp::value_type) == 4 || sizeof(typename _Vp::value_type) == 8)
+constexpr void
+scatter_to(x86_avx512_tag tag, const _Vp& values, _Range&& r, const _Idx& indexes, flags<_Flags...> flags)
+{
+  scatter_to(tag, values, r, typename _Idx::mask_type(true), indexes, flags);
 }
 #endif
 

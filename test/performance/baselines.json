@@ -367,6 +367,24 @@
   "avxsnc": 12,
   "sse": 19
  },
+ "scatter_u32_i64": {
+  "avx": 15,
+  "avx10": 16,
+  "avx2": 14,
+  "avx512": 11,
+  "avxglc": 16,
+  "avxsnc": 11,
+  "sse": 8
+ },
+ "scatter_u64_i64": {
+  "avx": 16,
+  "avx10": 16,
+  "avx2": 13,
+  "avx512": 11,
+  "avxglc": 16,
+  "avxsnc": 11,
+  "sse": 10
+ },
  "shl_i32": {
   "avx": 32,
   "avx10": 16,
