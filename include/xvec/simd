@@ -21,15 +21,17 @@
 #include <cstddef>
 #include <concepts>
 #include <bit>
-#include <complex>
 #include <functional> // std::plus, std::negate, etc.
 
 #include <numeric>
-#include <ostream> // std::ostream
 #include <ranges>
 #include <span>
 #include <tuple>
 #include <type_traits>
+
+#if __STDC_HOSTED__
+  #include <ostream>
+#endif
 
 #include <xvec/detail/config.hpp>
 #include <xvec/detail/compat.hpp>
@@ -660,7 +662,9 @@ basic_vec(_Span&&, Ts...)
 #include <xvec/detail/std_algorithm.hpp>
 #include <xvec/detail/std_bit.hpp>
 #include <xvec/detail/std_math.hpp>
+
 #include <xvec/detail/std_complex.hpp>
+
 #include <xvec/detail/reduce.hpp>
 #include <xvec/detail/std_numeric.hpp>
 #include <xvec/detail/std_utility.hpp>

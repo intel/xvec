@@ -383,6 +383,9 @@ constexpr detail::deduced_mask_t<_Vp> isunordered(const _Vp& x, const _Vp& y) { 
 // Basic
 // :TODO: Move from elsewhere in some cases.
 
+// Transcendental functions need libm, which a freestanding build doesn't have.
+#if __STDC_HOSTED__
+
 // Exponential
 _XVEC_UNARY_MATHS_OP(exp);
 _XVEC_UNARY_MATHS_OP(exp2);
@@ -409,6 +412,8 @@ _XVEC_BINARY_MATHS_OP(pow);
 // Error and gamma (lgamma not supported yet in SVML)
 _XVEC_UNARY_MATHS_OP(erf);
 _XVEC_UNARY_MATHS_OP(erfc);
+
+#endif // __STDC_HOSTED__
 
 /// @} cpp26_math
 
@@ -438,6 +443,7 @@ namespace _XVEC_NAMESPACE
   using simd::islessgreater;
   using simd::isunordered;
 
+#if __STDC_HOSTED__
   using simd::exp;
   using simd::exp2;
   using simd::expm1;
@@ -464,6 +470,7 @@ namespace _XVEC_NAMESPACE
 
   using simd::erf;
   using simd::erfc;
+#endif
 }
 
 // The maths-op generator macros exist only to stamp out the declarations above,

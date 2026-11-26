@@ -9,3 +9,4 @@ This page documents the version history and changes for the **xvec** library.
 - Initial open-source availability, copied over from a previously private internal version of the library.
 - Fixed issue which prevented the scatter/gather functions from taking signed indexes. All variants of these functions now take integral indexes, as per the C++26 working draft.
 - Fixed issue with generator constructors passing the index value as the wrong type. The index is now `simd_size_type` instead of the previously incorrect `size_t` type.
+- Added best-effort freestanding support on x86. An optimized `-ffreestanding` probe checks that representative operations, including arithmetic on a user-defined complex type, produce no external symbol references. This does not guarantee that every operation is runtime-free. Forced-scalar freestanding builds are not supported.
