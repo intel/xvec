@@ -1,6 +1,7 @@
 {
  "abs_i32": {
   "avx": 7,
+  "avx10": 4,
   "avx2": 4,
   "avx512": 4,
   "avxglc": 4,
@@ -9,6 +10,7 @@
  },
  "abs_i64": {
   "avx": 8,
+  "avx10": 4,
   "avx2": 6,
   "avx512": 4,
   "avxglc": 4,
@@ -17,6 +19,7 @@
  },
  "abs_i8": {
   "avx": 7,
+  "avx10": 4,
   "avx2": 4,
   "avx512": 4,
   "avxglc": 4,
@@ -25,6 +28,7 @@
  },
  "bit_reverse_u8": {
   "avx": 16,
+  "avx10": 15,
   "avx2": 16,
   "avx512": 15,
   "avxglc": 15,
@@ -41,14 +45,16 @@
  },
  "compress_complex_f64_2x": {
   "avx": null,
+  "avx10": 50,
   "avx2": null,
   "avx512": 26,
-  "avxglc": 51,
-  "avxsnc": 35,
+  "avxglc": 50,
+  "avxsnc": 33,
   "sse": null
  },
  "compress_u32": {
   "avx": null,
+  "avx10": 12,
   "avx2": null,
   "avx512": 10,
   "avxglc": 12,
@@ -57,14 +63,16 @@
  },
  "compress_u8_2x": {
   "avx": null,
+  "avx10": 45,
   "avx2": null,
   "avx512": 59,
   "avxglc": 34,
   "avxsnc": 19,
-  "sse": 109
+  "sse": null
  },
  "conj_cf16": {
   "avx": 11,
+  "avx10": 12,
   "avx2": 11,
   "avx512": 11,
   "avxglc": 12,
@@ -73,6 +81,7 @@
  },
  "conj_cf32": {
   "avx": 11,
+  "avx10": 12,
   "avx2": 11,
   "avx512": 11,
   "avxglc": 12,
@@ -81,6 +90,7 @@
  },
  "countl_zero_u32": {
   "avx": 24,
+  "avx10": 7,
   "avx2": 17,
   "avx512": 8,
   "avxglc": 7,
@@ -89,6 +99,7 @@
  },
  "eq_cf32": {
   "avx": 9,
+  "avx10": 15,
   "avx2": 7,
   "avx512": 15,
   "avxglc": 15,
@@ -97,6 +108,7 @@
  },
  "expand_u32": {
   "avx": null,
+  "avx10": 12,
   "avx2": null,
   "avx512": 8,
   "avxglc": 12,
@@ -105,30 +117,34 @@
  },
  "expand_u8_2x": {
   "avx": null,
+  "avx10": 44,
   "avx2": null,
-  "avx512": 72,
+  "avx512": 70,
   "avxglc": 33,
   "avxsnc": 21,
-  "sse": 111
+  "sse": null
  },
  "fma_cf16": {
   "avx": null,
-  "avx2": 505,
-  "avx512": 974,
+  "avx10": 13,
+  "avx2": 334,
+  "avx512": 602,
   "avxglc": 13,
-  "avxsnc": 839,
+  "avxsnc": 404,
   "sse": null
  },
  "fma_f16": {
   "avx": null,
-  "avx2": 255,
-  "avx512": 506,
+  "avx10": 8,
+  "avx2": 177,
+  "avx512": 307,
   "avxglc": 8,
-  "avxsnc": 438,
+  "avxsnc": 213,
   "sse": null
  },
  "gather_complex_f64": {
   "avx": 19,
+  "avx10": 26,
   "avx2": 18,
   "avx512": 23,
   "avxglc": 26,
@@ -137,6 +153,7 @@
  },
  "gather_u32": {
   "avx": 24,
+  "avx10": 35,
   "avx2": 27,
   "avx512": 30,
   "avxglc": 35,
@@ -145,6 +162,7 @@
  },
  "gather_u32_i64": {
   "avx": 18,
+  "avx10": 33,
   "avx2": 22,
   "avx512": 26,
   "avxglc": 33,
@@ -153,6 +171,7 @@
  },
  "gather_u64_i32": {
   "avx": 18,
+  "avx10": 33,
   "avx2": 22,
   "avx512": 26,
   "avxglc": 33,
@@ -161,6 +180,7 @@
  },
  "load_masked_u32": {
   "avx": 17,
+  "avx10": 15,
   "avx2": 11,
   "avx512": 11,
   "avxglc": 15,
@@ -168,15 +188,17 @@
   "sse": 7
  },
  "mask_from_integer_u32": {
-  "avx": 20,
-  "avx2": 12,
+  "avx": 25,
+  "avx10": 4,
+  "avx2": 17,
   "avx512": 4,
   "avxglc": 4,
   "avxsnc": 4,
-  "sse": 8
+  "sse": 9
  },
  "mask_from_integer_u8": {
   "avx": 19,
+  "avx10": 4,
   "avx2": 15,
   "avx512": 4,
   "avxglc": 4,
@@ -185,6 +207,7 @@
  },
  "mask_to_ullong_u8": {
   "avx": 8,
+  "avx10": 4,
   "avx2": 6,
   "avx512": 4,
   "avxglc": 4,
@@ -193,6 +216,7 @@
  },
  "mul_cf32": {
   "avx": null,
+  "avx10": 14,
   "avx2": 16,
   "avx512": 14,
   "avxglc": 14,
@@ -201,54 +225,61 @@
  },
  "permute_complex_f64": {
   "avx": null,
-  "avx2": 20,
+  "avx10": 27,
+  "avx2": 27,
   "avx512": 25,
-  "avxglc": 26,
+  "avxglc": 27,
   "avxsnc": 25,
   "sse": 15
  },
  "permute_mask_u32_4x": {
-  "avx": 115,
-  "avx2": 61,
+  "avx": null,
+  "avx10": 56,
+  "avx2": 59,
   "avx512": 41,
   "avxglc": 45,
   "avxsnc": 39,
-  "sse": 112
+  "sse": null
  },
  "permute_mask_u8_2x": {
   "avx": null,
-  "avx2": 230,
+  "avx10": 37,
+  "avx2": 227,
   "avx512": 36,
   "avxglc": 26,
   "avxsnc": 25,
-  "sse": 110
+  "sse": null
  },
  "permute_u16_4x": {
   "avx": null,
-  "avx2": 223,
+  "avx10": 81,
+  "avx2": 221,
   "avx512": 56,
   "avxglc": 70,
   "avxsnc": 56,
-  "sse": 108
+  "sse": null
  },
  "permute_u32_4x": {
-  "avx": 117,
-  "avx2": 61,
+  "avx": null,
+  "avx10": 52,
+  "avx2": 59,
   "avx512": 33,
   "avxglc": 41,
   "avxsnc": 32,
-  "sse": 108
+  "sse": null
  },
  "permute_u8_2x": {
   "avx": null,
-  "avx2": 230,
+  "avx10": 43,
+  "avx2": 227,
   "avx512": 30,
   "avxglc": 32,
   "avxsnc": 19,
-  "sse": 108
+  "sse": null
  },
  "popcount_u32x16": {
   "avx": 28,
+  "avx10": 6,
   "avx2": 27,
   "avx512": 26,
   "avxglc": 6,
@@ -257,6 +288,7 @@
  },
  "reduce_add_u8": {
   "avx": 15,
+  "avx10": 22,
   "avx2": 16,
   "avx512": 21,
   "avxglc": 22,
@@ -265,6 +297,7 @@
  },
  "reduce_add_u8_2x": {
   "avx": 27,
+  "avx10": 46,
   "avx2": 27,
   "avx512": 32,
   "avxglc": 35,
@@ -272,7 +305,8 @@
   "sse": 21
  },
  "reduce_min_index_u32": {
-  "avx": 10,
+  "avx": 9,
+  "avx10": 7,
   "avx2": 10,
   "avx512": 7,
   "avxglc": 7,
@@ -281,6 +315,7 @@
  },
  "saturating_add_i32": {
   "avx": 19,
+  "avx10": 18,
   "avx2": 14,
   "avx512": 18,
   "avxglc": 18,
@@ -289,6 +324,7 @@
  },
  "saturating_cast_u32_u8": {
   "avx": 12,
+  "avx10": 7,
   "avx2": 16,
   "avx512": 7,
   "avxglc": 7,
@@ -297,6 +333,7 @@
  },
  "saturating_sub_u32": {
   "avx": 8,
+  "avx10": 5,
   "avx2": 5,
   "avx512": 5,
   "avxglc": 5,
@@ -305,6 +342,7 @@
  },
  "scatter_complex_f64": {
   "avx": 9,
+  "avx10": 26,
   "avx2": 8,
   "avx512": 14,
   "avxglc": 26,
@@ -312,11 +350,12 @@
   "sse": 6
  },
  "scatter_u32": {
-  "avx": 23,
-  "avx2": 26,
+  "avx": 26,
+  "avx10": 23,
+  "avx2": 23,
   "avx512": 12,
   "avxglc": 23,
   "avxsnc": 12,
-  "sse": 18
+  "sse": 19
  }
 }

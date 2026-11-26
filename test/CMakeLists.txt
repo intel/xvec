@@ -391,6 +391,20 @@ xvec_processor(
   SDE_CPU spr
 )
 
+# AVX10.2 needs a recent compiler, so only register it when supported.
+cmake_push_check_state(RESET)
+set(CMAKE_REQUIRED_FLAGS "-march=diamondrapids")
+check_cxx_source_compiles("int main() { return 0; }" XVEC_COMPILER_SUPPORTS_AVX10_2_TARGET)
+cmake_pop_check_state()
+
+if(XVEC_COMPILER_SUPPORTS_AVX10_2_TARGET)
+  xvec_processor(
+    avx10
+    COMPILE_FLAGS -march=diamondrapids
+    SDE_CPU dmr
+  )
+endif()
+
 xvec_processor(
   generic
   COMPILE_FLAGS -march=skylake-avx512
