@@ -30,6 +30,7 @@ TARGETS = {
     "avx512": ("skylake-avx512", "skylake-avx512", []),
     "avxsnc": ("icelake-server", "icelake-server", []),
     "avxglc": ("sapphirerapids", "sapphirerapids", []),
+    "avx10": ("diamondrapids", "diamondrapids", []),
 }
 
 
