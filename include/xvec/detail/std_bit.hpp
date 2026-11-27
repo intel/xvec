@@ -34,7 +34,7 @@ namespace _XVEC_NAMESPACE::simd
 /// @param u The input vector.
 /// @param s The element-wise rotation offsets.
 /// @return A vector containing the rotated elements.
-template<vec_unsigned_integer _Up, vec_integral _Sp>
+template<vec_fundamental_unsigned_integer _Up, vec_integral _Sp>
   requires (_Up::size() == _Sp::size() &&
             sizeof(typename _Up::value_type) == sizeof(typename _Sp::value_type))
 constexpr _Up rotl(const _Up& u, const _Sp& s)
@@ -49,7 +49,7 @@ constexpr _Up rotl(const _Up& u, const _Sp& s)
 /// @param u The input vector.
 /// @param s The shared rotation offset.
 /// @return A vector containing the rotated elements.
-template<vec_unsigned_integer _Up, std::integral _Sp>
+template<vec_fundamental_unsigned_integer _Up, std::integral _Sp>
 constexpr _Up rotl(const _Up& u, _Sp s) {
   using _Rp = std::make_signed_t<typename _Up::value_type>;
   return rotl(u, rebind_t<_Rp, _Up>(_Rp(s))); }
@@ -62,7 +62,7 @@ constexpr _Up rotl(const _Up& u, _Sp s) {
 /// @param u The input vector.
 /// @param s The element-wise rotation offsets.
 /// @return A vector containing the rotated elements.
-template<vec_unsigned_integer _Up, vec_integral _Sp>
+template<vec_fundamental_unsigned_integer _Up, vec_integral _Sp>
   requires (_Up::size() == _Sp::size() &&
             sizeof(typename _Up::value_type) == sizeof(typename _Sp::value_type))
 constexpr _Up rotr(const _Up& u, const _Sp& s)
@@ -77,7 +77,7 @@ constexpr _Up rotr(const _Up& u, const _Sp& s)
 /// @param u The input vector.
 /// @param s The shared rotation offset.
 /// @return A vector containing the rotated elements.
-template<vec_unsigned_integer _Up, std::integral _Sp>
+template<vec_fundamental_unsigned_integer _Up, std::integral _Sp>
 constexpr _Up rotr(const _Up& u, _Sp s) {
   using _Rp = std::make_signed_t<typename _Up::value_type>;
   return rotr(u, rebind_t<_Rp, _Up>(_Rp(s))); }
@@ -86,7 +86,7 @@ constexpr _Up rotr(const _Up& u, _Sp s) {
 /// @tparam _Vp The input vector type.
 /// @param v The input vector.
 /// @return A signed integral vector containing the counts.
-template<vec_unsigned_integer _Vp>
+template<vec_fundamental_unsigned_integer _Vp>
 constexpr auto countl_zero(const _Vp& v) noexcept {
   using _Rp = std::make_signed_t<typename _Vp::value_type>;
   if (std::is_constant_evaluated())
@@ -99,13 +99,13 @@ constexpr auto countl_zero(const _Vp& v) noexcept {
 /// @tparam _Vp The input vector type.
 /// @param x The input vector.
 /// @return A signed integral vector containing the counts.
-template<vec_unsigned_integer _Vp> constexpr auto countl_one(const _Vp& x) noexcept { return countl_zero(~x); }
+template<vec_fundamental_unsigned_integer _Vp> constexpr auto countl_one(const _Vp& x) noexcept { return countl_zero(~x); }
 
 /// @brief Count consecutive zero bits from the least significant bit of each element.
 /// @tparam _Vp The input vector type.
 /// @param v The input vector.
 /// @return A signed integral vector containing the counts.
-template<vec_unsigned_integer _Vp>
+template<vec_fundamental_unsigned_integer _Vp>
 constexpr auto countr_zero(const _Vp& v) noexcept {
   using _Rp = std::make_signed_t<typename _Vp::value_type>;
   if (std::is_constant_evaluated())
@@ -123,13 +123,13 @@ constexpr auto countr_zero(const _Vp& v) noexcept {
 /// @tparam _Vp The input vector type.
 /// @param x The input vector.
 /// @return A signed integral vector containing the counts.
-template<vec_unsigned_integer _Vp> constexpr auto countr_one(const _Vp& x) noexcept { return countr_zero(~x); }
+template<vec_fundamental_unsigned_integer _Vp> constexpr auto countr_one(const _Vp& x) noexcept { return countr_zero(~x); }
 
 /// @brief Count the one bits in each element.
 /// @tparam _Vp The input vector type.
 /// @param x The input vector.
 /// @return A signed integral vector containing the population counts.
-template<vec_unsigned_integer _Vp>
+template<vec_fundamental_unsigned_integer _Vp>
 constexpr auto popcount(const _Vp& x) noexcept {
   using _Rp = std::make_signed_t<typename _Vp::value_type>;
   if (std::is_constant_evaluated())
@@ -142,7 +142,7 @@ constexpr auto popcount(const _Vp& x) noexcept {
 /// @tparam _Vp The input vector type.
 /// @param x The input vector.
 /// @return A mask that is true where the corresponding element contains exactly one set bit.
-template<vec_unsigned_integer _Vp>
+template<vec_fundamental_unsigned_integer _Vp>
 constexpr typename _Vp::mask_type has_single_bit(const _Vp& x) noexcept {
   return detail::has_single_bit(target, x);
 }
@@ -151,7 +151,7 @@ constexpr typename _Vp::mask_type has_single_bit(const _Vp& x) noexcept {
 /// @tparam _Vp The input vector type.
 /// @param x The input vector.
 /// @return A signed integral vector containing the bit widths.
-template<vec_unsigned_integer _Vp>
+template<vec_fundamental_unsigned_integer _Vp>
 constexpr rebind_t<std::make_signed_t<typename _Vp::value_type>, _Vp>
 bit_width(const _Vp& x) noexcept {
   using _R = rebind_t<std::make_signed_t<typename _Vp::value_type>, _Vp>;
@@ -162,7 +162,7 @@ bit_width(const _Vp& x) noexcept {
 /// @tparam _Vp The input vector type.
 /// @param x The input vector.
 /// @return An unsigned vector containing the element-wise bit ceilings.
-template<vec_unsigned_integer _Vp>
+template<vec_fundamental_unsigned_integer _Vp>
 constexpr _Vp bit_ceil(const _Vp& x) noexcept {
   if (std::is_constant_evaluated())
     return _Vp([=](auto i) { return std::bit_ceil(x[i]); });
@@ -182,7 +182,7 @@ constexpr _Vp bit_ceil(const _Vp& x) noexcept {
 /// @tparam _Vp The input vector type.
 /// @param v The input vector.
 /// @return An unsigned vector containing the element-wise bit floors.
-template<vec_unsigned_integer _Vp>
+template<vec_fundamental_unsigned_integer _Vp>
 constexpr _Vp bit_floor(const _Vp& v) noexcept {
   using _Tp = typename _Vp::value_type;
   if (std::is_constant_evaluated())
@@ -210,7 +210,7 @@ constexpr _Vp bit_floor(const _Vp& v) noexcept {
 /// @tparam _Vp The input vector type.
 /// @param x The input vector.
 /// @return A vector containing the bit-reversed elements.
-template<vec_unsigned_integer _Vp>
+template<vec_fundamental_unsigned_integer _Vp>
 constexpr _Vp bit_reverse(const _Vp& x) noexcept {
   if (std::is_constant_evaluated())
     return detail::bitreverse(generic_tag{}, x);
@@ -260,7 +260,7 @@ constexpr _Vp byteswap(const _Vp& v) noexcept {
 /// @param s The element-wise shift counts.
 /// @pre For every element i, 0 <= s[i] < N.
 /// @return A vector containing the funnel-shift results.
-template<vec_unsigned_integer _Up, vec_integral _Sp>
+template<vec_fundamental_unsigned_integer _Up, vec_integral _Sp>
   requires (sizeof(typename _Up::value_type) == sizeof(typename _Sp::value_type))
 constexpr _Up funnel_shift_right(const _Up& high, const _Up& low, const _Sp& s)
 {
@@ -276,7 +276,7 @@ constexpr _Up funnel_shift_right(const _Up& high, const _Up& low, const _Sp& s)
 /// @param s The shared shift count.
 /// @pre 0 <= s < N, where N is the element bit width.
 /// @return A vector containing the funnel-shift results.
-template<vec_unsigned_integer _Up, std::integral _Sp>
+template<vec_fundamental_unsigned_integer _Up, std::integral _Sp>
 constexpr _Up funnel_shift_right(const _Up& high, const _Up& low, _Sp s)
   { return funnel_shift_right(high, low, _Up(typename _Up::value_type(s))); }
 
@@ -290,7 +290,7 @@ constexpr _Up funnel_shift_right(const _Up& high, const _Up& low, _Sp s)
 /// @param s The element-wise shift counts.
 /// @pre For every element i, 0 <= s[i] < N.
 /// @return A vector containing the funnel-shift results.
-template<vec_unsigned_integer _Up, vec_integral _Sp>
+template<vec_fundamental_unsigned_integer _Up, vec_integral _Sp>
   requires (sizeof(typename _Up::value_type) == sizeof(typename _Sp::value_type))
 constexpr _Up funnel_shift_left(const _Up& high, const _Up& low, const _Sp& s)
 {
@@ -306,7 +306,7 @@ constexpr _Up funnel_shift_left(const _Up& high, const _Up& low, const _Sp& s)
 /// @param s The shared shift count.
 /// @pre 0 <= s < N, where N is the element bit width.
 /// @return A vector containing the funnel-shift results.
-template<vec_unsigned_integer _Up, std::integral _Sp>
+template<vec_fundamental_unsigned_integer _Up, std::integral _Sp>
 constexpr _Up funnel_shift_left(const _Up& high, const _Up& low, _Sp s)
   { return funnel_shift_left(high, low, _Up(typename _Up::value_type(s))); }
 

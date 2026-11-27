@@ -984,7 +984,7 @@ constexpr basic_vec<_Tp, _Abi> rotate_right(generic_tag, const basic_vec<_Tp, _A
 /// @param s The offset by which to shift. Precondition: 0 <= s[i] < N for all i.
 /// @return The funnel shifted simd value
 /// @internal
-template<vec_unsigned_integer _Vp, vec_integral _Sp>
+template<vec_fundamental_unsigned_integer _Vp, vec_integral _Sp>
   requires (sizeof(typename _Vp::value_type) == sizeof(typename _Sp::value_type))
 constexpr _Vp fsr(generic_tag, const _Vp& high, const _Vp& low, const _Sp& s) {
   constexpr std::uint8_t numBits = sizeof(typename _Vp::value_type) * 8;
@@ -993,7 +993,7 @@ constexpr _Vp fsr(generic_tag, const _Vp& high, const _Vp& low, const _Sp& s) {
   return select(sm != _Vp(), r, low);
 }
 
-template<vec_unsigned_integer _Vp, vec_integral _Sp>
+template<vec_fundamental_unsigned_integer _Vp, vec_integral _Sp>
   requires (sizeof(typename _Vp::value_type) == sizeof(typename _Sp::value_type))
 constexpr _Vp fsl(generic_tag, const _Vp& high, const _Vp& low, const _Sp& s) {
   constexpr std::uint8_t numBits = sizeof(typename _Vp::value_type) * 8;

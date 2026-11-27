@@ -22,7 +22,8 @@
 #include <utility>      // std::index_sequence, std::in_range
 
 #include <xvec/detail/config.hpp>
-#include <xvec/detail/utilities.hpp>
+#include <xvec/detail/compat.hpp>
+#include <xvec/detail/target_config.hpp>
 
 namespace _XVEC_NAMESPACE::simd {
 
@@ -38,25 +39,27 @@ template<simd_size_type _Np, typename _TARGET_TAG = target_tag> struct simd_fixe
 template<typename _Tp,       typename _Abi = simd_fixed_size_abi<detail::maxBytesInVec / sizeof(_Tp)>> class basic_vec;
 template<std::size_t _Bytes, typename _Abi = simd_fixed_size_abi<detail::maxBytesInVec / _Bytes>>      class basic_mask;
 
-/// Special ABI type used to indicate that the native register size should be used.
-template<typename _Tp> using simd_native_abi = simd_fixed_size_abi<detail::max_native_size<_Tp>>;
-
-/// Query how many elements are contained in a basic_vec<_Tp, _Abi>.
-// :TODO: Should be zero on unsupported types.
-template<class _Tp, class _Abi = simd_native_abi<_Tp>> inline constexpr simd_size_type simd_size_v = _Abi::num_elements;
-
 /// Query the number of bytes in an element of a simd::mask.
 template<class _Tp> struct simd_mask_element_size : std::integral_constant<std::size_t, 0> {};
 template<std::size_t _Bytes, typename _Abi> struct simd_mask_element_size<basic_mask<_Bytes, _Abi>> : std::integral_constant<std::size_t, _Bytes> {};
 template <typename _Tp> inline constexpr std::size_t simd_mask_element_size_v = simd_mask_element_size<_Tp>::value;
 
 namespace detail {
+  template<typename _Tp> inline constexpr simd_size_type max_native_size = maxBytesInVec / sizeof(_Tp);
+
   template <typename> inline constexpr bool is_vec_v = false;
   template <typename _Tp, typename _Abi> inline constexpr bool is_vec_v<basic_vec<_Tp, _Abi>> = true;
 
   template <typename> inline constexpr bool is_mask_v = false;
   template <std::size_t _Bytes, typename _Abi> inline constexpr bool is_mask_v<basic_mask<_Bytes, _Abi>> = true;
 }
+
+/// Special ABI type used to indicate that the native register size should be used.
+template<typename _Tp> using simd_native_abi = simd_fixed_size_abi<detail::max_native_size<_Tp>>;
+
+/// Query how many elements are contained in a basic_vec<_Tp, _Abi>.
+// :TODO: Should be zero on unsupported types.
+template<class _Tp, class _Abi = simd_native_abi<_Tp>> inline constexpr simd_size_type simd_size_v = _Abi::num_elements;
 
 template<typename _Vp> concept vec_type = detail::is_vec_v<std::remove_cvref_t<_Vp>>;
 template<typename _Mp> concept mask_type = detail::is_mask_v<std::remove_cvref_t<_Mp>>;
@@ -65,7 +68,14 @@ template<typename _Vp> concept vec_or_mask_type = vec_type<_Vp> || mask_type<_Vp
 template<typename _V> concept vec_integral =          vec_type<_V> && std::integral<typename _V::value_type>;
 template<typename _V> concept vec_signed_integral =   vec_type<_V> && std::signed_integral<typename _V::value_type>;
 template<typename _V> concept vec_unsigned_integral = vec_type<_V> && std::unsigned_integral<typename _V::value_type>;
-template<typename _V> concept vec_unsigned_integer =  vec_type<_V> && detail::fundamental_unsigned_integer<typename _V::value_type>;
+
+template<typename _V> concept vec_fundamental_signed_integer =
+  vec_type<_V> && detail::fundamental_signed_integer<typename _V::value_type>;
+template<typename _V> concept vec_fundamental_unsigned_integer =
+  vec_type<_V> && detail::fundamental_unsigned_integer<typename _V::value_type>;
+template<typename _V> concept vec_fundamental_integer =
+  vec_fundamental_signed_integer<_V> || vec_fundamental_unsigned_integer<_V>;
+
 template<typename _V> concept vec_floating_point =    vec_type<_V> && detail::is_floating_point_v<typename _V::value_type>;
 template<typename _V> concept vec_complex =           vec_type<_V> && detail::complex_number<typename _V::value_type>;
 template<typename _V> concept vec_arithmetic =        vec_integral<_V> || vec_floating_point<_V>;

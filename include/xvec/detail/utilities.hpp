@@ -11,6 +11,7 @@
 #include <xvec/detail/config.hpp>
 
 #include <bit>
+#include <concepts>
 #include <cstdint>
 #include <cstddef>
 #include <span>
@@ -23,8 +24,6 @@
 #include <stdexcept>
 #include <string>
 #endif
-
-#include <xvec/detail/compat.hpp>
 
 namespace _XVEC_NAMESPACE::simd {
 
@@ -84,6 +83,14 @@ template<typename _Tp>
 concept fundamental_unsigned_integer = any_same_v<_Tp,
                                                  unsigned char, unsigned short, unsigned int,
                                                  unsigned long, unsigned long long>;
+
+/// Detect a fundamental signed integer type.
+template<typename _Tp>
+concept fundamental_signed_integer = any_same_v<_Tp, signed char, short, int, long, long long>;
+
+/// Detect either a fundamental signed or a fundamental unsigned integer type.
+template<typename _Tp>
+concept fundamental_integer = fundamental_signed_integer<_Tp> || fundamental_unsigned_integer<_Tp>;
 
 /// Get the underlying compiler representation element type that will be used to
 /// build the vec builtin type. Typically just the same type, but for complex
@@ -160,9 +167,6 @@ inline constexpr bool is_arithmetic_like_v = std::is_integral_v<std::remove_cvre
 template<typename _Tp> struct unsigned_to_signed { using value_type = std::make_signed_t<_Tp>; };
 template<> struct unsigned_to_signed<unsigned __int128> { using value_type = signed __int128; };
 template<typename _Tp> using make_signed_t = typename unsigned_to_signed<_Tp>::value_type;
-
-/// The maximum native size of a register containing the given types.
-template <typename _Tp> inline constexpr simd_size_type max_native_size = detail::maxBytesInVec / sizeof(_Tp);
 
 /// The implementation-defined upper limit on size. Currently constrainted by
 /// how big a compact mask can be (__int128_t).
