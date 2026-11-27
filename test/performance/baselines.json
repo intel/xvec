@@ -143,6 +143,22 @@
   "avxsnc": 30,
   "sse": 15
  },
+ "gather_u32_i64": {
+  "avx": 18,
+  "avx2": 22,
+  "avx512": 26,
+  "avxglc": 33,
+  "avxsnc": 26,
+  "sse": 10
+ },
+ "gather_u64_i32": {
+  "avx": 18,
+  "avx2": 22,
+  "avx512": 26,
+  "avxglc": 33,
+  "avxsnc": 26,
+  "sse": 10
+ },
  "load_masked_u32": {
   "avx": 17,
   "avx2": 11,
