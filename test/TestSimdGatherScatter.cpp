@@ -295,6 +295,20 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ConstexprGatherFromContiguousRange, TypeParam, Loa
 }
 #endif // _XVEC_HAS_CONSTEXPR
 
+BOOST_AUTO_TEST_CASE(PartialScatterIgnoresOutOfRange64BitIndex)
+{
+  using Vec = xvec::simd::vec<std::int64_t, 2>;
+
+  const Vec indexes = std::array<std::int64_t, 2>{1ull << 32, 1}; // Out of range for a 32-bit table.
+  std::array<std::int64_t, 2> out{};
+
+  // Should write `7` to out[1] and ignore the out-of-range index.
+  partial_scatter_to(Vec(std::int64_t{7}), out, indexes);
+
+  BOOST_TEST(out[0] == 0); // If this is 7 too, the internal range check failed.
+  BOOST_TEST(out[1] == 7);
+}
+
 BOOST_AUTO_TEST_CASE_TEMPLATE(ScatterToRangeWithSameType, TypeParam, AllSimdTypes)
 {
   using xvec::rebind_cast;
