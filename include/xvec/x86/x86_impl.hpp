@@ -1752,7 +1752,8 @@ constexpr _Vp fsl(x86_avxsnc_tag, const _Vp& high, const _Vp& low, const _Sp& sh
 #endif // __AVX512VBMI2__
 
 #if defined(__AVX10_2__)
-template<vec_of<_Float16> _Vp>
+template<vec_type _Vp>
+requires is_fp16_v<typename _Vp::value_type>
 inline float inner_product(x86_avx10_tag, const _Vp& lhs, const _Vp& rhs, float init)
 {
   constexpr int numHalves = register_size<_Float16, _Vp::size()>;

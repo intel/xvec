@@ -55,7 +55,9 @@ BOOST_AUTO_TEST_CASE(GfniUnavailable)
 
 #if defined(__AVX10_2__) && !defined(_XVEC_FORCE_SCALAR)
 using Fp16SimdTypes = to_simd<Fp16FloatTypes>;
-BOOST_AUTO_TEST_CASE_TEMPLATE(Dpphps, TypeParam, Fp16SimdTypes)
+// Include an even, non-register-aligned size to exercise the partial final chunk.
+using DpphpsTypes = mp11::mp_set_push_back<Fp16SimdTypes, xvec::simd::vec<_Float16, 34>>;
+BOOST_AUTO_TEST_CASE_TEMPLATE(Dpphps, TypeParam, DpphpsTypes)
 {
   if constexpr (TypeParam::size() % 2 != 0)
   {

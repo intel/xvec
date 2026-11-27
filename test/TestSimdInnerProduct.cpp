@@ -9,6 +9,7 @@
 #include "TypesToTest.hpp"
 #include "SimdTestUtilities.hpp"
 
+#if defined(__FLT16_MIN__)
 using Fp16SimdTypes = to_simd<Fp16FloatTypes>;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(Fp16InnerProduct, TypeParam, Fp16SimdTypes)
@@ -22,6 +23,20 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(Fp16InnerProduct, TypeParam, Fp16SimdTypes)
     expected += float(lhs[i]) * float(rhs[i]);
 
   BOOST_TEST(xvec::simd::inner_product(lhs, rhs) == expected);
+  BOOST_TEST(xvec::simd::inner_product(lhs, rhs, 100.0f) == expected + 100.0f);
+}
+
+// An even size that is not a multiple of the register size exercises the partial final chunk.
+BOOST_AUTO_TEST_CASE(Fp16InnerProductPartialChunk)
+{
+  using Vec = xvec::simd::vec<_Float16, 34>;
+  const Vec lhs = GetRandomVector<Vec>(8);
+  const Vec rhs = GetRandomVector<Vec>(8);
+
+  float expected = 0.0f;
+  for (int i = 0; i < Vec::size(); ++i)
+    expected += float(lhs[i]) * float(rhs[i]);
+
   BOOST_TEST(xvec::simd::inner_product(lhs, rhs, 100.0f) == expected + 100.0f);
 }
 
@@ -50,3 +65,12 @@ constexpr float constexprInnerProduct()
 // 10 + (1*-3) + (2*-1) + (3*1) + (4*3) + (5*5) = 45
 static_assert(constexprInnerProduct() == 45.0f);
 #endif
+
+#else // __FLT16_MIN__
+
+// Keep the suite non-empty on targets without FP16 support.
+BOOST_AUTO_TEST_CASE(Fp16Unavailable)
+{
+  BOOST_TEST(true);
+}
+#endif // __FLT16_MIN__

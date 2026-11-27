@@ -91,14 +91,16 @@ constexpr rebind_t<_Up, _Vp> saturating_cast(const _Vp& v) noexcept {
 
 /// @brief Compute the inner product of two FP16 vectors of any size, accumulating
 /// in FP32. The FP16 inputs are widened to FP32 for the multiplication and
-/// accumulation, to improve precision and avoid FP16 overflow. Targets with a native FP16 dot-product instruction use it; otherwise
-/// the products are formed and summed in FP32.
+/// accumulation, to improve precision and avoid FP16 overflow. Targets with a
+/// native FP16 dot-product instruction use it; otherwise the products are
+/// formed and summed in FP32.
 /// @tparam _Vp The FP16 basic_vec type.
 /// @param lhs The first vector.
 /// @param rhs The second vector.
 /// @param init The initial value added to the sum of products.
 /// @return init plus the sum of lhs[i] * rhs[i] as an FP32 value.
-template<vec_of<_Float16> _Vp>
+template<vec_type _Vp>
+requires detail::is_fp16_v<typename _Vp::value_type>
 constexpr float inner_product(const _Vp& lhs, const _Vp& rhs, float init = 0.0f)
 {
   if (std::is_constant_evaluated())

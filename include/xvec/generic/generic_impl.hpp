@@ -1095,7 +1095,8 @@ saturating_cast(generic_tag, const _From& input) noexcept
 /// @param rhs The second vector.
 /// @param init The value added to the sum of products.
 /// @return init plus the sum of lhs[i] * rhs[i].
-template<vec_of<_Float16> _Vp>
+template<vec_type _Vp>
+requires is_fp16_v<typename _Vp::value_type>
 constexpr float inner_product(generic_tag, const _Vp& lhs, const _Vp& rhs, float init)
   { return init + reduce(rebind_cast<float>(lhs) * rebind_cast<float>(rhs)); }
 
