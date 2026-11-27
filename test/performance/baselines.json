@@ -178,6 +178,15 @@
   "avxsnc": 26,
   "sse": 10
  },
+ "inner_product_f16": {
+  "avx": 93,
+  "avx10": 77,
+  "avx2": 85,
+  "avx512": 69,
+  "avxglc": 71,
+  "avxsnc": 74,
+  "sse": null
+ },
  "load_masked_u32": {
   "avx": 17,
   "avx10": 15,

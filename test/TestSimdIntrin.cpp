@@ -53,4 +53,37 @@ BOOST_AUTO_TEST_CASE(GfniUnavailable)
 }
 #endif
 
+#if defined(__AVX10_2__) && !defined(_XVEC_FORCE_SCALAR)
+using Fp16SimdTypes = to_simd<Fp16FloatTypes>;
+// Include an even, non-register-aligned size to exercise the partial final chunk.
+using DpphpsTypes = mp11::mp_set_push_back<Fp16SimdTypes, xvec::simd::vec<_Float16, 34>>;
+BOOST_AUTO_TEST_CASE_TEMPLATE(Dpphps, TypeParam, DpphpsTypes)
+{
+  if constexpr (TypeParam::size() % 2 != 0)
+  {
+    // Odd sizes get rejected.
+    using Acc = xvec::simd::vec<float, (TypeParam::size() + 1) / 2>;
+    static_assert(!requires(TypeParam v, Acc w) { xvec::simd::x86::dpphps(v, v, w); });
+  }
+  else
+  {
+    using Acc = xvec::simd::vec<float, TypeParam::size() / 2>;
+    const TypeParam a = GetRandomVector<TypeParam>(8);
+    const TypeParam b = GetRandomVector<TypeParam>(8);
+    const Acc acc = xvec::simd::iota<Acc>;
+
+    float pairSum[Acc::size()]{};
+    for (int i = 0; i < TypeParam::size(); ++i)
+      pairSum[i / 2] += float(a[i]) * float(b[i]);
+
+    const Acc withAcc = xvec::simd::x86::dpphps(a, b, acc);
+    const Acc fromZero = xvec::simd::x86::dpphps(a, b, Acc(0.0f));
+    for (int i = 0; i < Acc::size(); ++i)
+    {
+      BOOST_TEST(withAcc[i] == acc[i] + pairSum[i]);
+      BOOST_TEST(fromZero[i] == pairSum[i]);
+    }
+  }
+}
+#endif
 

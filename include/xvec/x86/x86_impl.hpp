@@ -1751,6 +1751,28 @@ constexpr _Vp fsl(x86_avxsnc_tag, const _Vp& high, const _Vp& low, const _Sp& sh
 }
 #endif // __AVX512VBMI2__
 
+#if defined(__AVX10_2__)
+template<vec_type _Vp>
+requires is_fp16_v<typename _Vp::value_type>
+inline float inner_product(x86_avx10_tag, const _Vp& lhs, const _Vp& rhs, float init)
+{
+  constexpr int numHalves = register_size<_Float16, _Vp::size()>;
+
+  // Reuse dpphps's FP32 accumulator so only one register needs a final
+  // reduction. This saves vector adds at the cost of a dependency between
+  // chunks. Since many scenarios using inner_product will be running several at
+  // once (e.g., matrix multiply, AI transformers, etc.) the higher-throughput
+  // variant is likely more useful.
+  vec<float, numHalves / 2> acc(0.0f);
+  chunked_invoke<numHalves>([&](auto x, auto y) {
+    acc = x86::dpphps(grow<numHalves>(x), grow<numHalves>(y), acc);
+  }, lhs, rhs);
+
+  // Final reduction of just one register
+  return init + reduce(acc);
+}
+#endif // __AVX10_2__
+
 } // End of detail namespace
 
 } // namespace _XVEC_NAMESPACE::simd

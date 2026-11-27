@@ -104,6 +104,53 @@ inline _Bytes gf2p8affine(const _Bytes& b, std::uint64_t m)
 inline auto gf2p8affine(auto unhandled, auto); // Does nothing for other platforms to allow link-time detection.
 #endif
 
+#if defined(__AVX10_2__)
+/// Accumulate FP16 dot products into FP32 values using the x86 AVX10
+/// VDPPHPS instruction. Each FP32 result element is the accumulator element
+/// plus the products of the corresponding adjacent pair of FP16 elements, i.e.
+/// `acc[i] + a[2*i] * b[2*i] + a[2*i+1] * b[2*i+1]`. Any number of result
+/// elements is supported, and the instruction is called as many times as needed.
+/// The products and sums are accumulated in FP32 rather than FP16 to improve precision.
+/// Both FP16 inputs must have exactly two elements per accumulator element.
+/// @tparam _Half The vector type of the FP16 inputs.
+/// @tparam _Acc The FP32 accumulator vector type, with one element per pair of inputs.
+/// @param a The first FP16 inputs.
+/// @param b The second FP16 inputs.
+/// @param acc The accumulator values.
+/// @return The accumulated FP32 values.
+template<vec_of<_Float16> _Half, vec_of<float> _Acc>
+requires (_Half::size() == 2 * _Acc::size() && _Acc::size() <= detail::max_native_size<float>)
+inline _Acc dpphps(const _Half& a, const _Half& b, const _Acc& acc)
+{
+  constexpr int pairs = _Acc::size();
+  constexpr int width = detail::register_size<float, pairs>;
+  const auto x = grow<2 * width>(a).to_register();
+  const auto y = grow<2 * width>(b).to_register();
+  const auto w = grow<width>(acc).to_register();
+  if constexpr (pairs <= 4)
+    return _Acc(_mm_dpph_ps(w, x, y));
+  else if constexpr (pairs <= 8)
+    return _Acc(_mm256_dpph_ps(w, x, y));
+  else
+    return _Acc(_mm512_dpph_ps(w, x, y));
+}
+
+/// @overload
+/// Handle arbitrary length inputs which use more than one register.
+template<vec_of<_Float16> _Half, vec_of<float> _Acc>
+requires (_Half::size() == 2 * _Acc::size() && _Acc::size() > detail::max_native_size<float>)
+inline _Acc dpphps(const _Half& a, const _Half& b, const _Acc& acc)
+{
+  // Chunk in pairs so the FP16 inputs and the accumulator advance together.
+  auto wrapper = [](auto x, auto y, auto w) {
+    return dpphps(simd_bit_cast<_Float16>(x), simd_bit_cast<_Float16>(y), w);
+  };
+  return chunked_invoke(wrapper, simd_bit_cast<std::uint32_t>(a), simd_bit_cast<std::uint32_t>(b), acc);
+}
+#else
+inline auto dpphps(auto unhandled, auto, auto); // Does nothing for other platforms to allow link-time detection.
+#endif
+
 /// @} x86_intrin
 
 } // End of simd::x86 namespace
