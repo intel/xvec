@@ -366,5 +366,41 @@
   "avxglc": 23,
   "avxsnc": 12,
   "sse": 19
+ },
+ "shl_i32": {
+  "avx": 32,
+  "avx10": 16,
+  "avx2": 17,
+  "avx512": 18,
+  "avxglc": 17,
+  "avxsnc": 18,
+  "sse": 43
+ },
+ "shl_i32_scalar": {
+  "avx": 32,
+  "avx10": 22,
+  "avx2": 21,
+  "avx512": 24,
+  "avxglc": 22,
+  "avxsnc": 24,
+  "sse": 33
+ },
+ "shr_i32": {
+  "avx": 32,
+  "avx10": 16,
+  "avx2": 17,
+  "avx512": 18,
+  "avxglc": 17,
+  "avxsnc": 18,
+  "sse": 44
+ },
+ "shr_i32_scalar": {
+  "avx": 32,
+  "avx10": 22,
+  "avx2": 21,
+  "avx512": 24,
+  "avxglc": 22,
+  "avxsnc": 24,
+  "sse": 33
  }
 }

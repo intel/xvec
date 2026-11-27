@@ -148,6 +148,30 @@ template<saturation_integer T>
   return lhs / rhs;
 }
 
+/// @brief Shift left, or right for negative counts, without wrapping the shift count.
+template<fundamental_integer T, fundamental_integer S>
+[[nodiscard]] constexpr T shl(T x, S s) noexcept
+{
+  constexpr S width = std::numeric_limits<std::make_unsigned_t<T>>::digits;
+  if constexpr (std::is_signed_v<S>) {
+    if (s < 0)
+      return s <= -width ? T(x < 0 ? -1 : 0) : T(x >> -s);
+  }
+  return s >= width ? T(0) : T(x << s);
+}
+
+/// @brief Shift right with sign extension for signed inputs, or left for negative counts.
+template<fundamental_integer T, fundamental_integer S>
+[[nodiscard]] constexpr T shr(T x, S s) noexcept
+{
+  constexpr S width = std::numeric_limits<std::make_unsigned_t<T>>::digits;
+  if constexpr (std::is_signed_v<S>) {
+    if (s < 0)
+      return s <= -width ? T(0) : T(x << -s);
+  }
+  return s >= width ? T(x < 0 ? -1 : 0) : T(x >> s);
+}
+
 // Transparent binary function objects for bitwise shift operations. These are
 // used as the default shift operators for simd types.
 template<typename T = void>
